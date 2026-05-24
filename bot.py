@@ -1,14 +1,11 @@
 #!/usr/bin/env python3
 """
 JPROP Ads Assistant — Telegram Bot
-Runs on Render free tier.
-- Telegram: long-polling
-- Health check: aiohttp web server on $PORT (keeps Render from sleeping)
+Uses raw aiohttp to call Telegram API directly.
+No python-telegram-bot dependency — works on any Python version.
 """
 import os, html, logging, asyncio
-from aiohttp import web
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes
+from aiohttp import web, ClientSession, ClientTimeout
 from meta_api import (
     ACCOUNTS, fetch_all_accounts, fetch_single_account,
     get_actions_value, LEAD_ACTION_TYPES,
@@ -17,9 +14,10 @@ from meta_api import (
 logging.basicConfig(format="%(asctime)s %(levelname)s %(message)s", level=logging.INFO)
 log = logging.getLogger(__name__)
 
-BOT_TOKEN = os.environ["TELEGRAM_BOT_TOKEN"]
-PORT      = int(os.environ.get("PORT", 10000))
-MAX_LEN   = 4000
+TOKEN   = os.environ["TELEGRAM_BOT_TOKEN"]
+PORT    = int(os.environ.get("PORT", 10000))
+TG      = f"https://api.telegram.org/bot{TOKEN}"
+MAX_LEN = 4000
 
 DATE_LABELS = {
     "today":               "Today",
@@ -30,38 +28,37 @@ DATE_LABELS = {
     "last_month":          "Last Month",
 }
 
-# ── Keyboards ──────────────────────────────────────────────────────
+# ── Keyboards (raw Telegram inline_keyboard format) ────────────────
 
-def main_kbd() -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup([
-        [InlineKeyboardButton("📊 All — Today",      callback_data="all:today"),
-         InlineKeyboardButton("📊 All — Yesterday",  callback_data="all:yesterday")],
-        [InlineKeyboardButton("📊 All — This Week",  callback_data="all:this_week_sun_today"),
-         InlineKeyboardButton("📊 All — This Month", callback_data="all:this_month")],
-        [InlineKeyboardButton("📊 All — Last Week",  callback_data="all:last_week_sun_sat"),
-         InlineKeyboardButton("📊 All — Last Month", callback_data="all:last_month")],
-        [InlineKeyboardButton("── Single Account ──", callback_data="noop")],
-        [InlineKeyboardButton("🔵 Tony & WJ",   callback_data="pick:0"),
-         InlineKeyboardButton("🟢 Weejia",      callback_data="pick:1")],
-        [InlineKeyboardButton("🟣 Ivan",        callback_data="pick:2"),
-         InlineKeyboardButton("🔶 Darren",      callback_data="pick:3")],
-        [InlineKeyboardButton("🔴 Joey",        callback_data="pick:4"),
-         InlineKeyboardButton("🟡 Am Prop",     callback_data="pick:5")],
-        [InlineKeyboardButton("⚪ Maurice",     callback_data="pick:6"),
-         InlineKeyboardButton("🌸 Janice & WJ", callback_data="pick:7")],
-    ])
+MAIN_KBD = [
+    [{"text": "📊 All — Today",      "callback_data": "all:today"},
+     {"text": "📊 All — Yesterday",  "callback_data": "all:yesterday"}],
+    [{"text": "📊 All — This Week",  "callback_data": "all:this_week_sun_today"},
+     {"text": "📊 All — This Month", "callback_data": "all:this_month"}],
+    [{"text": "📊 All — Last Week",  "callback_data": "all:last_week_sun_sat"},
+     {"text": "📊 All — Last Month", "callback_data": "all:last_month"}],
+    [{"text": "── Single Account ──", "callback_data": "noop"}],
+    [{"text": "🔵 Tony & WJ",   "callback_data": "pick:0"},
+     {"text": "🟢 Weejia",      "callback_data": "pick:1"}],
+    [{"text": "🟣 Ivan",        "callback_data": "pick:2"},
+     {"text": "🔶 Darren",      "callback_data": "pick:3"}],
+    [{"text": "🔴 Joey",        "callback_data": "pick:4"},
+     {"text": "🟡 Am Prop",     "callback_data": "pick:5"}],
+    [{"text": "⚪ Maurice",     "callback_data": "pick:6"},
+     {"text": "🌸 Janice & WJ", "callback_data": "pick:7"}],
+]
 
-def acc_kbd(i: int) -> InlineKeyboardMarkup:
+def acc_kbd(i: int) -> list:
     s = str(i)
-    return InlineKeyboardMarkup([
-        [InlineKeyboardButton("Today",      callback_data=f"acc:{s}:today"),
-         InlineKeyboardButton("Yesterday",  callback_data=f"acc:{s}:yesterday")],
-        [InlineKeyboardButton("This Week",  callback_data=f"acc:{s}:this_week_sun_today"),
-         InlineKeyboardButton("This Month", callback_data=f"acc:{s}:this_month")],
-        [InlineKeyboardButton("Last Week",  callback_data=f"acc:{s}:last_week_sun_sat"),
-         InlineKeyboardButton("Last Month", callback_data=f"acc:{s}:last_month")],
-        [InlineKeyboardButton("« Back",     callback_data="menu")],
-    ])
+    return [
+        [{"text": "Today",      "callback_data": f"acc:{s}:today"},
+         {"text": "Yesterday",  "callback_data": f"acc:{s}:yesterday"}],
+        [{"text": "This Week",  "callback_data": f"acc:{s}:this_week_sun_today"},
+         {"text": "This Month", "callback_data": f"acc:{s}:this_month"}],
+        [{"text": "Last Week",  "callback_data": f"acc:{s}:last_week_sun_sat"},
+         {"text": "Last Month", "callback_data": f"acc:{s}:last_month"}],
+        [{"text": "« Back",     "callback_data": "menu"}],
+    ]
 
 # ── Signal helpers ─────────────────────────────────────────────────
 
@@ -73,9 +70,9 @@ def b_thru(v): return "🟢" if v >= 10  else ("🟡" if v >= 5  else "🔴")
 def b_ctr(v):  return "🟢" if v >= 1.0 else ("🟡" if v >= 0.5 else "🔴")
 def b_cpl(v):  return "🟢" if 0 < v <= 50 else ("🟡" if v <= 100 else "🔴")
 
-# ── Campaign formatter (single account detail) ─────────────────────
+# ── Campaign formatter ─────────────────────────────────────────────
 
-def fmt_campaign(c: dict, budget_map: dict) -> str:
+def fmt_campaign(c: dict, bm: dict) -> str:
     name   = _h(c.get("campaign_name", "Unknown")[:45])
     spend  = float(c.get("spend", 0))
     imp    = int(c.get("impressions", 0))
@@ -91,7 +88,7 @@ def fmt_campaign(c: dict, budget_map: dict) -> str:
     hook_p = hook / imp * 100 if imp else 0
     thru_p = thru / imp * 100 if imp else 0
     cpl    = spend / leads if leads else 0
-    daily  = budget_map.get(cid, 0)
+    daily  = bm.get(cid, 0)
 
     bud_s  = f" <i>💰{rm(daily)}/day</i>" if daily > 0 else ""
     lead_s = f"{int(leads)} leads" if leads else "<b>0 leads ⚠️</b>"
@@ -120,13 +117,12 @@ async def build_all(preset: str) -> str:
         bm    = r.get("budget_map", {})
 
         if err:
-            parts.append(f"{emoji} <b>{_h(lbl)}</b> ❌ {_h(err.get('message', ''))}")
+            parts.append(f"{emoji} <b>{_h(lbl)}</b> ❌ {_h(err.get('message',''))}")
             continue
         if not data:
             parts.append(f"{emoji} <b>{_h(lbl)}</b> — 📭 No data")
             continue
 
-        # Account budget in header
         acc_budget = sum(bm.get(c.get("campaign_id", ""), 0) for c in data)
         bud_hdr    = f" | 💰 <b>{rm(acc_budget)}/day</b>" if acc_budget > 0 else ""
         lines      = [f"{emoji} <b>{_h(lbl)}</b>{bud_hdr}"]
@@ -137,8 +133,7 @@ async def build_all(preset: str) -> str:
             cpm = float(c.get("cpm", 0))
             ld  = get_actions_value(c.get("actions") or [], LEAD_ACTION_TYPES)
             cpl = sp / ld if ld else 0
-            acc_sp += sp
-            acc_ld += ld
+            acc_sp += sp; acc_ld += ld
 
             name  = _h(c.get("campaign_name", "Unknown")[:38])
             ld_s  = f"{int(ld)} leads | CPL {rm(cpl)}{b_cpl(cpl)}" if ld else "0 leads ⚠️"
@@ -149,10 +144,7 @@ async def build_all(preset: str) -> str:
             if ld > 0 and cpl > 50:
                 alerts.append(f"💸 <b>{_h(lbl)}</b> — {_h(c.get('campaign_name','')[:25])} CPL {rm(cpl)}{b_cpl(cpl)}")
 
-        gs += acc_sp
-        gl += acc_ld
-        g_budget += acc_budget
-
+        gs += acc_sp; gl += acc_ld; g_budget += acc_budget
         acpl   = acc_sp / acc_ld if acc_ld else 0
         acpl_s = f"{int(acc_ld)} leads | CPL <b>{rm(acpl)}</b>{b_cpl(acpl)}" if acc_ld else "0 leads ⚠️"
         lines.append(f"  ↳ Spent <b>{rm(acc_sp)}</b> | {acpl_s}")
@@ -170,16 +162,16 @@ async def build_all(preset: str) -> str:
 # ── Report: Single account ─────────────────────────────────────────
 
 async def build_single(idx: int, preset: str) -> str:
-    r      = await fetch_single_account(idx, preset)
-    label  = DATE_LABELS.get(preset, preset)
-    emoji  = r["emoji"]
-    lbl    = r["label"]
-    data   = r.get("data") or []
-    err    = r.get("error")
-    bm     = r.get("budget_map", {})
-    hdr    = f"📊 <b>{_h(lbl)} — {label}</b>\n{'─'*30}"
+    r     = await fetch_single_account(idx, preset)
+    label = DATE_LABELS.get(preset, preset)
+    emoji = r["emoji"]
+    lbl   = r["label"]
+    data  = r.get("data") or []
+    err   = r.get("error")
+    bm    = r.get("budget_map", {})
+    hdr   = f"📊 <b>{_h(lbl)} — {label}</b>\n{'─'*30}"
 
-    if err:      return f"{hdr}\n❌ {_h(err.get('message', ''))}"
+    if err:      return f"{hdr}\n❌ {_h(err.get('message',''))}"
     if not data: return f"{hdr}\n📭 No active campaigns"
 
     parts  = [f"{hdr}\n{emoji} <b>{_h(lbl)}</b>"]
@@ -198,107 +190,149 @@ async def build_single(idx: int, preset: str) -> str:
         if ld > 0 and cpl > 50:
             alerts.append(f"💸 CPL {rm(cpl)}{b_cpl(cpl)} — {_h(c.get('campaign_name','')[:30])}")
 
-    tcpl   = tot_sp / tot_ld if tot_ld else 0
-    tls    = f"🎯 {int(tot_ld)} leads | CPL <b>{rm(tcpl)}</b>{b_cpl(tcpl)}" if tot_ld else "<b>0 leads ⚠️</b>"
-    bud_l  = f" | Budget <b>{rm(tot_bud)}/day</b>" if tot_bud > 0 else ""
+    tcpl  = tot_sp / tot_ld if tot_ld else 0
+    tls   = f"🎯 {int(tot_ld)} leads | CPL <b>{rm(tcpl)}</b>{b_cpl(tcpl)}" if tot_ld else "<b>0 leads ⚠️</b>"
+    bud_l = f" | Budget <b>{rm(tot_bud)}/day</b>" if tot_bud > 0 else ""
     parts.append(f"💰 <b>Spent: {rm(tot_sp)}{bud_l} | {tls}</b>")
     if alerts:
         parts.append("🚨 <b>Alerts:</b>\n" + "\n".join(alerts))
     return "\n\n".join(parts)
 
-# ── Send helper ────────────────────────────────────────────────────
+# ── Telegram API helpers ───────────────────────────────────────────
 
-async def safe_send(update: Update, text: str, kbd=None) -> None:
-    kw   = dict(parse_mode="HTML", reply_markup=kbd)
-    send = (update.callback_query.message.reply_text
-            if update.callback_query else update.message.reply_text)
+async def tg(session: ClientSession, method: str, payload: dict) -> dict:
+    try:
+        async with session.post(
+            f"{TG}/{method}", json=payload,
+            timeout=ClientTimeout(total=10)
+        ) as r:
+            return await r.json()
+    except Exception as e:
+        log.error(f"tg/{method} error: {e}")
+        return {}
+
+async def send(session: ClientSession, chat_id: int, text: str, kbd: list = None) -> None:
+    kw = {"chat_id": chat_id, "parse_mode": "HTML"}
+    if kbd:
+        kw["reply_markup"] = {"inline_keyboard": kbd}
+
     if len(text) <= MAX_LEN:
-        await send(text, **kw)
+        await tg(session, "sendMessage", {**kw, "text": text})
         return
-    paras, cur = text.split("\n\n"), ""
+
+    paras, cur, chunks = text.split("\n\n"), "", []
     for p in paras:
         if len(cur) + len(p) + 2 > MAX_LEN:
-            await send(cur.strip(), **kw)
-            cur = p
-            kw  = dict(parse_mode="HTML")
+            chunks.append(cur.strip()); cur = p
         else:
             cur += ("\n\n" if cur else "") + p
     if cur:
-        await send(cur.strip(), **kw)
+        chunks.append(cur.strip())
 
-# ── Telegram handlers ──────────────────────────────────────────────
+    for i, chunk in enumerate(chunks):
+        payload = {**kw, "text": chunk}
+        if i < len(chunks) - 1:
+            payload.pop("reply_markup", None)
+        await tg(session, "sendMessage", payload)
 
-async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    await update.message.reply_text(
-        "👋 <b>JPROP Ads Assistant</b>\n\nTap a button to get your report:",
-        parse_mode="HTML", reply_markup=main_kbd(),
-    )
+# ── Update handler ─────────────────────────────────────────────────
 
-async def on_button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    q, d = update.callback_query, update.callback_query.data
-    await q.answer()
+async def handle(update: dict) -> None:
+    async with ClientSession() as session:
+        # Text message
+        if "message" in update:
+            msg  = update["message"]
+            text = msg.get("text", "").strip()
+            cid  = msg["chat"]["id"]
+            if text.startswith("/start") or text.startswith("/help"):
+                await send(session, cid,
+                           "👋 <b>JPROP Ads Assistant</b>\n\nTap a button to get your report:",
+                           MAIN_KBD)
+            return
 
-    if d == "noop":
-        return
+        # Button press
+        if "callback_query" not in update:
+            return
 
-    if d == "menu":
-        await q.message.reply_text(
-            "👋 <b>JPROP Ads Assistant</b>\n\nTap a button to get your report:",
-            parse_mode="HTML", reply_markup=main_kbd(),
-        )
-        return
+        q   = update["callback_query"]
+        cid = q["message"]["chat"]["id"]
+        d   = q["data"]
+        await tg(session, "answerCallbackQuery", {"callback_query_id": q["id"]})
 
-    if d.startswith("all:"):
-        preset = d.split(":", 1)[1]
-        await q.message.reply_text(f"⏳ Fetching {DATE_LABELS.get(preset, preset)}…")
-        await safe_send(update, await build_all(preset), main_kbd())
+        if d == "noop":
+            return
 
-    elif d.startswith("pick:"):
-        idx = int(d.split(":", 1)[1])
-        a   = ACCOUNTS[idx]
-        await q.message.reply_text(
-            f"{a['emoji']} <b>{_h(a['label'])}</b> — select period:",
-            parse_mode="HTML", reply_markup=acc_kbd(idx),
-        )
+        if d == "menu":
+            await send(session, cid,
+                       "👋 <b>JPROP Ads Assistant</b>\n\nTap a button to get your report:",
+                       MAIN_KBD)
+            return
 
-    elif d.startswith("acc:"):
-        _, idx_s, preset = d.split(":")
-        idx = int(idx_s)
-        await q.message.reply_text(
-            f"⏳ Fetching {ACCOUNTS[idx]['label']} — {DATE_LABELS.get(preset, preset)}…"
-        )
-        await safe_send(update, await build_single(idx, preset), acc_kbd(idx))
+        if d.startswith("all:"):
+            preset = d.split(":", 1)[1]
+            await send(session, cid, f"⏳ Fetching {DATE_LABELS.get(preset, preset)}…")
+            await send(session, cid, await build_all(preset), MAIN_KBD)
 
-# ── Health check server (keeps Render free tier alive) ────────────
+        elif d.startswith("pick:"):
+            idx = int(d.split(":", 1)[1])
+            a   = ACCOUNTS[idx]
+            await send(session, cid,
+                       f"{a['emoji']} <b>{_h(a['label'])}</b> — select period:",
+                       acc_kbd(idx))
 
-async def health(_request):
-    return web.Response(text="OK")
+        elif d.startswith("acc:"):
+            _, idx_s, preset = d.split(":")
+            idx = int(idx_s)
+            await send(session, cid,
+                       f"⏳ Fetching {ACCOUNTS[idx]['label']} — {DATE_LABELS.get(preset, preset)}…")
+            await send(session, cid, await build_single(idx, preset), acc_kbd(idx))
 
-async def start_health_server():
+# ── Long-polling loop ──────────────────────────────────────────────
+
+async def poll():
+    offset = 0
+    log.info("Bot polling started")
+    async with ClientSession() as session:
+        # Clear pending updates on start
+        async with session.get(f"{TG}/getUpdates",
+                               params={"offset": -1, "limit": 1},
+                               timeout=ClientTimeout(total=10)) as r:
+            data = await r.json()
+            if data.get("result"):
+                offset = data["result"][-1]["update_id"] + 1
+
+    while True:
+        try:
+            async with ClientSession() as session:
+                async with session.get(
+                    f"{TG}/getUpdates",
+                    params={"timeout": 30, "offset": offset, "limit": 10},
+                    timeout=ClientTimeout(total=40)
+                ) as r:
+                    data = await r.json()
+
+            for upd in data.get("result", []):
+                offset = upd["update_id"] + 1
+                asyncio.create_task(handle(upd))
+
+        except asyncio.CancelledError:
+            break
+        except Exception as e:
+            log.error(f"Poll error: {e}")
+            await asyncio.sleep(5)
+
+# ── Health check + entry point ─────────────────────────────────────
+
+async def health(_): return web.Response(text="OK")
+
+async def run():
     app = web.Application()
     app.router.add_get("/", health)
     runner = web.AppRunner(app)
     await runner.setup()
     await web.TCPSite(runner, "0.0.0.0", PORT).start()
-    log.info(f"Health check running on port {PORT}")
-
-# ── Entry point ────────────────────────────────────────────────────
-
-async def run():
-    # Start health check server
-    await start_health_server()
-
-    # Start Telegram bot
-    bot = Application.builder().token(BOT_TOKEN).build()
-    bot.add_handler(CommandHandler("start", cmd_start))
-    bot.add_handler(CommandHandler("help",  cmd_start))
-    bot.add_handler(CallbackQueryHandler(on_button))
-
-    async with bot:
-        await bot.start()
-        await bot.updater.start_polling(drop_pending_updates=True)
-        log.info("Bot polling started")
-        await asyncio.Event().wait()   # run forever
+    log.info(f"Health check on port {PORT}")
+    await poll()
 
 if __name__ == "__main__":
     asyncio.run(run())
