@@ -46,6 +46,7 @@ MAIN_KBD = [
      {"text": "🟡 Am Prop",     "callback_data": "pick:5"}],
     [{"text": "⚪ Maurice",     "callback_data": "pick:6"},
      {"text": "🟤 Janice & WJ", "callback_data": "pick:7"}],
+     {"text": "🥎 Bobo, "callback_data": "pick:8"}],
 ]
 
 def acc_kbd(i: int) -> list:
