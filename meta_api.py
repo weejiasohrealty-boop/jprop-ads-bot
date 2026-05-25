@@ -31,7 +31,8 @@ ACCOUNTS = [
     {"label": "Joey Chaw",              "emoji": "🔴", "id": "act_789254227570709",  "token_key": "TOKEN_JPROP"},
     {"label": "Am Properties",          "emoji": "🟡", "id": "act_6220476828060673", "token_key": "TOKEN_AM"},
     {"label": "Maurice / Starproperty", "emoji": "⚪", "id": "act_983330607631571",  "token_key": "TOKEN_MAURICE"},
-    {"label": "Janice & WJ",            "emoji": "🌸", "id": "act_820487997381734",  "token_key": "TOKEN_JPROP"},
+    {"label": "Janice & WJ",            "emoji": "🟤", "id": "act_820487997381734",  "token_key": "TOKEN_JPROP"},
+    {"label": "Bobo",  "emoji": "🥎", "id": "act_1616708788537498", "token_key": "TOKEN_BOBO"},
 ]
 
 
