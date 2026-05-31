@@ -59,12 +59,17 @@ def _creds():
 
 def _open_workbook():
     gc = gspread.authorize(_creds())
+    sheet_id = os.environ.get("REPORT_SHEET_ID", "")
+    if sheet_id:
+        return gc.open_by_key(sheet_id)
+    # Fallback: open by name (sheet must already exist and be shared with service account)
     try:
         return gc.open(SHEET_NAME)
     except gspread.SpreadsheetNotFound:
-        sh = gc.create(SHEET_NAME)
-        log.info(f"Created spreadsheet: {SHEET_NAME}")
-        return sh
+        raise RuntimeError(
+            "Spreadsheet not found. Please set REPORT_SHEET_ID env var with your Google Sheet ID. "
+            "Create the sheet manually, share it with your service account email, then copy the ID from the URL."
+        )
 
 
 def _tab_name_for_last_week() -> str:
