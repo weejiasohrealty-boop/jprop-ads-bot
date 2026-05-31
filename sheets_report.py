@@ -101,16 +101,19 @@ def _formula_row(row: int) -> list:
 
 
 def _formula_total(first: int, last: int) -> list:
-    """Formulas for the grand total row."""
-    rng = f"{first}:{last}"
+    """Formulas for the grand total row. Uses col:row:col:row to avoid range bleed."""
+    sp  = f"{SP}{first}:{SP}{last}"
+    bud = f"{BUD}{first}:{BUD}{last}"
+    ld  = f"{LD}{first}:{LD}{last}"
+    apt = f"{APT}{first}:{APT}{last}"
     return [
-        f"=ROUND(SUM({SP}{rng}),2)",
-        f"=ROUND(SUM({BUD}{rng}),2)",
-        f"=SUM({LD}{rng})",
-        f"=IF(SUM({LD}{rng})>0, ROUND(SUM({SP}{rng})/SUM({LD}{rng}),2), 0)",
-        f"=SUM({APT}{rng})",
-        f"=IF(SUM({LD}{rng})>0, ROUND(SUM({APT}{rng})/SUM({LD}{rng})*100,2), 0)",
-        f"=IF(SUM({APT}{rng})>0, ROUND(SUM({SP}{rng})/SUM({APT}{rng}),2), 0)",
+        f"=ROUND(SUM({sp}),2)",
+        f"=ROUND(SUM({bud}),2)",
+        f"=SUM({ld})",
+        f"=IF(SUM({ld})>0, ROUND(SUM({sp})/SUM({ld}),2), 0)",
+        f"=SUM({apt})",
+        f"=IF(SUM({ld})>0, ROUND(SUM({apt})/SUM({ld})*100,2), 0)",
+        f"=IF(SUM({apt})>0, ROUND(SUM({sp})/SUM({apt}),2), 0)",
     ]
 
 
