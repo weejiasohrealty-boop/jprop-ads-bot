@@ -10,6 +10,7 @@ from meta_api import (
     ACCOUNTS, fetch_all_accounts, fetch_single_account,
     get_actions_value, LEAD_ACTION_TYPES,
 )
+from sheets_report import write_weekly_report, _tab_name_for_last_week
 
 logging.basicConfig(format="%(asctime)s %(levelname)s %(message)s", level=logging.INFO)
 log = logging.getLogger(__name__)
@@ -46,8 +47,9 @@ MAIN_KBD = [
      {"text": "🟡 Am Prop",     "callback_data": "pick:5"}],
     [{"text": "⚪ Maurice",     "callback_data": "pick:6"},
      {"text": "🟤 Janice & WJ", "callback_data": "pick:7"}],
-     [{"text": "🥎 Bobo Yeong",  "callback_data": "pick:8"}],
-    [{"text": "⛳️ Pang",  "callback_data": "pick:9"}],
+    [{"text": "🟠 Bobo Yeong",  "callback_data": "pick:8"}],
+    [{"text": "⛳️ Pang",        "callback_data": "pick:9"}],
+    [{"text": "📋 Weekly Report → Sheets", "callback_data": "weekly"}],
 ]
 
 def acc_kbd(i: int) -> list:
@@ -270,7 +272,10 @@ async def handle(update: dict) -> None:
                        MAIN_KBD)
             return
 
-        if d.startswith("all:"):
+        if d == "weekly":
+            await build_weekly_report(session, cid)
+
+        elif d.startswith("all:"):
             preset = d.split(":", 1)[1]
             await send(session, cid, f"⏳ Fetching {DATE_LABELS.get(preset, preset)}…")
             await send(session, cid, await build_all(preset), MAIN_KBD)
@@ -288,6 +293,45 @@ async def handle(update: dict) -> None:
             await send(session, cid,
                        f"⏳ Fetching {ACCOUNTS[idx]['label']} — {DATE_LABELS.get(preset, preset)}…")
             await send(session, cid, await build_single(idx, preset), acc_kbd(idx))
+
+# ── Weekly report ─────────────────────────────────────────────────
+
+async def build_weekly_report(session: ClientSession, cid: int) -> None:
+    tab = _tab_name_for_last_week()
+    await send(session, cid,
+               f"⏳ Fetching last week data ({tab})…\nThis takes ~30 seconds.")
+    try:
+        results = await fetch_all_accounts("last_week_sun_sat")
+        url     = await write_weekly_report(results, tab)
+    except Exception as e:
+        await send(session, cid,
+                   f"❌ Error: {_h(str(e))}\n\n"
+                   f"Check that GOOGLE_CREDS_B64 is set in Render.",
+                   MAIN_KBD)
+        return
+
+    # Quick summary in Telegram
+    total_sp = total_ld = 0.0
+    for r in results:
+        for c in (r.get("data") or []):
+            total_sp += float(c.get("spend", 0))
+            total_ld += sum(
+                float(a.get("value", 0))
+                for a in (c.get("actions") or [])
+                if a.get("action_type") in {"lead", "offsite_conversion.lead"}
+            )
+    cpl = round(total_sp / total_ld, 2) if total_ld else 0
+
+    await send(session, cid,
+               f"✅ <b>Weekly Report — {tab}</b>\n"
+               f"{'─'*30}\n"
+               f"💸 Total Spend: <b>RM{round(total_sp, 2)}</b>\n"
+               f"🎯 Total Leads: <b>{int(total_ld)}</b>\n"
+               f"📊 Avg CPL: <b>RM{cpl}</b>\n\n"
+               f"📋 <b>Open your sheet and fill in the Appt column (column G):</b>\n"
+               f"{url}\n\n"
+               f"Appt%, Cost/Appt will calculate automatically.",
+               MAIN_KBD)
 
 # ── Long-polling loop ──────────────────────────────────────────────
 
