@@ -50,11 +50,18 @@ CAP = "I"   # Cost/Appt  (formula)
 
 
 def _creds():
-    b64 = os.environ.get("GOOGLE_CREDS_B64", "")
+    b64 = os.environ.get("GOOGLE_CREDS_B64", "").strip()
     if not b64:
-        raise RuntimeError("Missing GOOGLE_CREDS_B64")
-    return Credentials.from_service_account_info(
-        json.loads(base64.b64decode(b64)), scopes=SCOPES)
+        raise RuntimeError("GOOGLE_CREDS_B64 env var is missing or empty.")
+    try:
+        raw = base64.b64decode(b64)
+    except Exception as e:
+        raise RuntimeError(f"GOOGLE_CREDS_B64 is not valid base64: {e}")
+    try:
+        info = json.loads(raw)
+    except Exception as e:
+        raise RuntimeError(f"GOOGLE_CREDS_B64 decoded but is not valid JSON: {e}")
+    return Credentials.from_service_account_info(info, scopes=SCOPES)
 
 
 def _open_workbook():
