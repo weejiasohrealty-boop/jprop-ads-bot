@@ -1,20 +1,20 @@
 """
-sheets_report.py — Write weekly Meta ad data to Google Sheets.
+sheets_report.py — Write weekly Meta ad data to Google Sheets (account level).
 
-Sheet: "JPROP Weekly Reports"  (created automatically)
-Tab per week: "25 May - 31 May 2026"
+One row per account. Tab per week: "25 May - 31 May 2026"
 
 Columns:
-  A: Account        B: Campaign        C: Spend (RM)    D: Daily Budget (RM)
-  E: Leads          F: Cost/Lead       G: Appt          H: Appt %
-  I: Cost/Appt
+  A: Account        B: Spend (RM)     C: Daily Budget (RM)
+  D: Leads          E: Cost/Lead      F: Appt (manual)
+  G: Appt %         H: Cost/Appt
 
-F, H, I are formulas — auto-calculate.
-G (Appt) is filled manually by WJ in Google Sheets.
+E, G, H are formulas — auto-calculate.
+F (Appt) is filled manually by WJ in Google Sheets (highlighted yellow).
 
 Env vars required:
   GOOGLE_CREDS_B64   — base64-encoded service account JSON
-  REPORT_SHEET_NAME  — spreadsheet name (default: JPROP Weekly Reports)
+  REPORT_SHEET_ID    — Google Sheet ID from the URL
+  REPORT_SHEET_NAME  — spreadsheet name fallback (default: JPROP Weekly Reports)
 """
 import os, base64, json, asyncio, logging
 from datetime import datetime, timezone, timedelta
@@ -32,21 +32,20 @@ SCOPES     = ["https://www.googleapis.com/auth/spreadsheets",
 SHEET_NAME = os.environ.get("REPORT_SHEET_NAME", "JPROP Weekly Reports")
 
 HEADERS = [
-    "Account", "Campaign",
+    "Account",
     "Spend (RM)", "Daily Budget (RM)", "Leads",
     "Cost/Lead", "Appt", "Appt %", "Cost/Appt",
 ]
 
-# Column letters (A=1)
-C = {h: chr(64 + i + 1) for i, h in enumerate(HEADERS)}
-# C["Spend (RM)"] = "C", C["Leads"] = "E", etc.
-SP  = "C"   # Spend
-BUD = "D"   # Daily Budget
-LD  = "E"   # Leads
-CPL = "F"   # Cost/Lead  (formula)
-APT = "G"   # Appt       (manual)
-APR = "H"   # Appt %     (formula)
-CAP = "I"   # Cost/Appt  (formula)
+# Column letters
+SP  = "B"   # Spend
+BUD = "C"   # Daily Budget
+LD  = "D"   # Leads
+CPL = "E"   # Cost/Lead  (formula)
+APT = "F"   # Appt       (manual, yellow)
+APR = "G"   # Appt %     (formula)
+CAP = "H"   # Cost/Appt  (formula)
+LAST_COL = "H"
 
 
 def _creds():
@@ -60,7 +59,10 @@ def _creds():
     try:
         info = json.loads(raw)
     except Exception as e:
-        raise RuntimeError(f"GOOGLE_CREDS_B64 decoded but is not valid JSON: {e}")
+        raise RuntimeError(
+            f"GOOGLE_CREDS_B64 decoded but is not valid JSON: {e}. "
+            f"Make sure you ran: base64 -i creds.json | tr -d '\\n' | pbcopy"
+        )
     return Credentials.from_service_account_info(info, scopes=SCOPES)
 
 
@@ -69,40 +71,32 @@ def _open_workbook():
     sheet_id = os.environ.get("REPORT_SHEET_ID", "")
     if sheet_id:
         return gc.open_by_key(sheet_id)
-    # Fallback: open by name (sheet must already exist and be shared with service account)
     try:
         return gc.open(SHEET_NAME)
     except gspread.SpreadsheetNotFound:
         raise RuntimeError(
-            "Spreadsheet not found. Please set REPORT_SHEET_ID env var with your Google Sheet ID. "
-            "Create the sheet manually, share it with your service account email, then copy the ID from the URL."
+            "Spreadsheet not found. Set REPORT_SHEET_ID env var with your Google Sheet ID. "
+            "Create the sheet manually, share it with your service account email, "
+            "then copy the ID from the URL."
         )
 
 
 def _tab_name_for_last_week() -> str:
     """Returns e.g. '18 May - 24 May 2026' for the last Sun-Sat week."""
     today = datetime.now(timezone.utc).date()
-    # Most recent Saturday
-    days_since_sat = (today.weekday() + 2) % 7  # Mon=0 → sat offset
+    days_since_sat = (today.weekday() + 2) % 7
     last_sat = today - timedelta(days=days_since_sat)
     last_sun = last_sat - timedelta(days=6)
     return f"{last_sun.strftime('%-d %b')} - {last_sat.strftime('%-d %b %Y')}"
 
 
-def _tab_name_for_this_week() -> str:
-    today = datetime.now(timezone.utc).date()
-    days_since_sun = (today.weekday() + 1) % 7
-    this_sun = today - timedelta(days=days_since_sun)
-    return f"Week of {this_sun.strftime('%-d %b %Y')}"
-
-
 def _formula_row(row: int) -> list:
-    """Return formula strings for CPL, Appt%, Cost/Appt for a data row."""
+    """Formulas for Cost/Lead, Appt%, Cost/Appt."""
     return [
-        f"=IF({LD}{row}>0, ROUND({SP}{row}/{LD}{row},2), 0)",   # Cost/Lead
-        "",                                                        # Appt — manual
-        f"=IF({LD}{row}>0, ROUND({APT}{row}/{LD}{row}*100,2), 0)",  # Appt%
-        f"=IF({APT}{row}>0, ROUND({SP}{row}/{APT}{row},2), 0)",  # Cost/Appt
+        f"=IF({LD}{row}>0, ROUND({SP}{row}/{LD}{row},2), 0)",         # Cost/Lead
+        "",                                                              # Appt — manual
+        f"=IF({LD}{row}>0, ROUND({APT}{row}/{LD}{row}*100,2), 0)",    # Appt %
+        f"=IF({APT}{row}>0, ROUND({SP}{row}/{APT}{row},2), 0)",       # Cost/Appt
     ]
 
 
@@ -122,112 +116,109 @@ def _formula_total(first: int, last: int) -> list:
 
 def _write_sync(results: list, tab_name: str) -> str:
     """
-    Write results to a new (or existing) tab. Returns the spreadsheet URL.
+    Write account-level summary to a new (or existing) tab.
     results: list of dicts from fetch_all_accounts()
+    Returns the spreadsheet URL.
     """
     sh = _open_workbook()
 
-    # Get or create the worksheet tab
     try:
         ws = sh.worksheet(tab_name)
         ws.clear()
     except gspread.WorksheetNotFound:
-        ws = sh.add_worksheet(tab_name, rows=200, cols=len(HEADERS))
+        ws = sh.add_worksheet(tab_name, rows=100, cols=len(HEADERS))
 
     all_rows = [HEADERS]
-    data_start = 2  # row index of first data row (1-based, row 1 = header)
+    data_start = 2  # row 1 = header
 
     for r in results:
-        label   = r.get("label", "")
-        emoji   = r.get("emoji", "")
-        data    = r.get("data") or []
-        bm      = r.get("budget_map", {})
-        err     = r.get("error")
+        label  = r.get("label", "")
+        emoji  = r.get("emoji", "")
+        data   = r.get("data") or []
+        bm     = r.get("budget_map", {})
+        err    = r.get("error")
 
         if err or not data:
             continue
 
-        for c in data:
-            spend  = round(float(c.get("spend", 0)), 2)
-            cid    = c.get("campaign_id", "")
-            budget = round(bm.get(cid, 0), 2)
-            leads  = int(sum(
+        # Aggregate spend, budget, leads across all campaigns for this account
+        total_spend  = round(sum(float(c.get("spend", 0)) for c in data), 2)
+        total_budget = round(sum(bm.get(c.get("campaign_id", ""), 0) for c in data), 2)
+        total_leads  = int(sum(
+            sum(
                 float(a.get("value", 0))
                 for a in (c.get("actions") or [])
                 if a.get("action_type") in {"lead", "offsite_conversion.lead"}
-            ))
-            camp_name = c.get("campaign_name", "Unknown")
-            row_num   = data_start + len(all_rows) - 1  # -1 for header
+            )
+            for c in data
+        ))
 
-            row = [
-                f"{emoji} {label}",
-                camp_name,
-                spend,
-                budget,
-                leads,
-            ] + _formula_row(row_num)
-            all_rows.append(row)
+        if total_spend == 0:
+            continue  # skip accounts with no spend this week
+
+        row_num = data_start + len(all_rows) - 1
+        row = [
+            f"{emoji} {label}",
+            total_spend,
+            total_budget,
+            total_leads,
+        ] + _formula_row(row_num)
+        all_rows.append(row)
 
     if len(all_rows) <= 1:
         ws.append_row(["No data for this period"])
         return sh.url
 
-    # Total row
+    # Grand total row
     first_data = data_start
-    last_data  = data_start + len(all_rows) - 2  # -1 header, -1 for 0-index
-    total_row  = ["TOTAL", ""] + _formula_total(first_data, last_data)
+    last_data  = data_start + len(all_rows) - 2
+    total_row  = ["TOTAL"] + _formula_total(first_data, last_data)
     all_rows.append(total_row)
 
     ws.update(all_rows, value_input_option="USER_ENTERED")
 
-    # ── Formatting ────────────────────────────────────────────────
+    # ── Formatting ─────────────────────────────────────────────────
     n_rows = len(all_rows)
 
-    # Header: dark blue background, white bold text
     try:
-        from gspread_formatting import (
-            format_cell_range, CellFormat, TextFormat, Color,
-            set_frozen, set_column_width, borders
-        )
+        # Header: dark blue, white bold
         hdr_fmt = CellFormat(
             backgroundColor=Color(0.12, 0.31, 0.49),
             textFormat=TextFormat(bold=True, foregroundColor=Color(1, 1, 1), fontSize=10),
         )
-        format_cell_range(ws, f"A1:I1", hdr_fmt)
+        format_cell_range(ws, f"A1:{LAST_COL}1", hdr_fmt)
 
-        # Total row: light blue background, bold
+        # Total row: light blue bold
         tot_fmt = CellFormat(
             backgroundColor=Color(0.84, 0.90, 0.95),
             textFormat=TextFormat(bold=True, fontSize=10),
         )
-        format_cell_range(ws, f"A{n_rows}:I{n_rows}", tot_fmt)
+        format_cell_range(ws, f"A{n_rows}:{LAST_COL}{n_rows}", tot_fmt)
 
-        # Appt column: yellow highlight so user knows to fill it
-        apt_fmt = CellFormat(
-            backgroundColor=Color(1.0, 0.97, 0.80),
-        )
-        format_cell_range(ws, f"G2:G{n_rows-1}", apt_fmt)
+        # Appt column (F): yellow — user fills this in
+        apt_fmt = CellFormat(backgroundColor=Color(1.0, 0.97, 0.80))
+        format_cell_range(ws, f"F2:F{n_rows-1}", apt_fmt)
 
         # Freeze header row
         set_frozen(ws, rows=1)
 
         # Column widths
-        set_column_width(ws, "A", 160)
-        set_column_width(ws, "B", 260)
-        for col in ["C", "D", "E", "F", "G", "H", "I"]:
-            set_column_width(ws, col, 110)
+        set_column_width(ws, "A", 200)   # Account
+        for col in ["B", "C", "D", "E", "F", "G", "H"]:
+            set_column_width(ws, col, 130)
 
     except Exception as e:
         log.warning(f"Formatting skipped: {e}")
 
-    log.info(f"Weekly report written to tab '{tab_name}' ({n_rows} rows)")
+    log.info(f"Weekly report written to tab '{tab_name}' ({n_rows-2} accounts)")
     return sh.url
 
 
 async def write_weekly_report(results: list, tab_name: str = None) -> str:
     """
     Async wrapper. Returns Google Sheets URL.
-    tab_name: optional custom tab name; defaults to last Sun-Sat week.
+    results: from fetch_all_accounts()
+    tab_name: optional; defaults to last Sun-Sat week label.
     """
     if not tab_name:
         tab_name = _tab_name_for_last_week()
