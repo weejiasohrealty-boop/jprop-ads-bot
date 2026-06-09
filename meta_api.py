@@ -34,6 +34,7 @@ ACCOUNTS = [
     {"label": "Janice & WJ",            "emoji": "🟤", "id": "act_820487997381734",  "token_key": "TOKEN_JPROP"},
     {"label": "Bobo",  "emoji": "🥎", "id": "act_1616708788537498", "token_key": "TOKEN_JPROP"},
     {"label": "Pang",  "emoji": "⛳️", "id": "act_266937751083201", "token_key": "TOKEN_JPROP"},
+    {"label": "Chris",  "emoji": "⛔️", "id": "act_296535961110870", "token_key": "TOKEN_JPROP"},
 ]
 
 
