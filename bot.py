@@ -5,6 +5,7 @@ Uses raw aiohttp to call Telegram API directly.
 No python-telegram-bot dependency — works on any Python version.
 """
 import os, html, logging, asyncio
+from datetime import datetime, timezone
 from aiohttp import web, ClientSession, ClientTimeout
 from meta_api import (
     ACCOUNTS, fetch_all_accounts, fetch_single_account,
@@ -49,7 +50,6 @@ MAIN_KBD = [
      {"text": "🟤 Janice & WJ", "callback_data": "pick:7"}],
     [{"text": "🟠 Bobo Yeong",  "callback_data": "pick:8"}],
     [{"text": "⛳️ Pang",        "callback_data": "pick:9"}],
-    [{"text": "⛔️ Chris",        "callback_data": "pick:10"}],
     [{"text": "📋 Weekly Report → Sheets", "callback_data": "weekly"}],
 ]
 
@@ -75,17 +75,30 @@ def b_thru(v): return "🟢" if v >= 10  else ("🟡" if v >= 5  else "🔴")
 def b_ctr(v):  return "🟢" if v >= 1.0 else ("🟡" if v >= 0.5 else "🔴")
 def b_cpl(v):  return "🟢" if 0 < v <= 50 else ("🟡" if v <= 100 else "🔴")
 
+def _edit_str(iso: str) -> str:
+    """Returns '📅 5 Jun · 8d ago' from an ISO 8601 updated_time string, or ''."""
+    if not iso:
+        return ""
+    try:
+        dt   = datetime.strptime(iso[:19], "%Y-%m-%dT%H:%M:%S").replace(tzinfo=timezone.utc)
+        days = (datetime.now(timezone.utc) - dt).days
+        return f" 📅 {dt.strftime('%-d %b')} · {days}d ago"
+    except Exception:
+        return ""
+
 # ── Campaign formatter ─────────────────────────────────────────────
 
 def fmt_campaign(c: dict, bm: dict) -> str:
-    name   = _h(c.get("campaign_name", "Unknown")[:45])
-    spend  = float(c.get("spend", 0))
-    imp    = int(c.get("impressions", 0))
-    cpm    = float(c.get("cpm", 0))
-    ctr    = float(c.get("ctr", 0))
-    acts   = c.get("actions") or []
-    thru_a = c.get("video_thruplay_watched_actions") or []
-    cid    = c.get("campaign_id", "")
+    name      = _h(c.get("campaign_name", "Unknown")[:45])
+    status    = c.get("effective_status", "ACTIVE")
+    is_active = status == "ACTIVE"
+    spend     = float(c.get("spend", 0))
+    imp       = int(c.get("impressions", 0))
+    cpm       = float(c.get("cpm", 0))
+    ctr       = float(c.get("ctr", 0))
+    acts      = c.get("actions") or []
+    thru_a    = c.get("video_thruplay_watched_actions") or []
+    cid       = c.get("campaign_id", "")
 
     leads  = get_actions_value(acts, LEAD_ACTION_TYPES)
     hook   = get_actions_value(acts, {"video_view"})
@@ -95,11 +108,22 @@ def fmt_campaign(c: dict, bm: dict) -> str:
     cpl    = spend / leads if leads else 0
     daily  = bm.get(cid, 0)
 
-    bud_s  = f" <i>💰{rm(daily)}/day</i>" if daily > 0 else ""
+    # Status badge — only show for campaigns that actually spent
+    if spend > 0:
+        badge = "🟢" if is_active else "⏸️"
+    else:
+        badge = "📌"
+
+    # Budget — only for active campaigns
+    bud_s  = f" <i>💰{rm(daily)}/day</i>" if (daily > 0 and is_active) else ""
+
+    # Last edit date + days since edit
+    edit_s = _edit_str(c.get("updated_time", ""))
+
     lead_s = f"{int(leads)} leads" if leads else "<b>0 leads ⚠️</b>"
     cpl_s  = f" | CPL <b>{rm(cpl)}</b>{b_cpl(cpl)}" if leads else ""
 
-    line  = f"  📌 <b>{name}</b>{bud_s}\n"
+    line  = f"  {badge} <b>{name}</b>{bud_s}{edit_s}\n"
     line += f"     💸 {rm(spend)} | {lead_s}{cpl_s}\n"
     line += f"     CPM {rm(cpm)}{b_cpm(cpm)} | Hook {hook_p:.1f}%{b_hook(hook_p)}"
     line += f" | Thru {thru_p:.1f}%{b_thru(thru_p)} | CTR {ctr:.2f}%{b_ctr(ctr)}"
@@ -128,21 +152,28 @@ async def build_all(preset: str) -> str:
             parts.append(f"{emoji} <b>{_h(lbl)}</b> — 📭 No data")
             continue
 
-        acc_budget = sum(bm.get(c.get("campaign_id", ""), 0) for c in data)
-        bud_hdr    = f" | 💰 <b>{rm(acc_budget)}/day</b>" if acc_budget > 0 else ""
-        lines      = [f"{emoji} <b>{_h(lbl)}</b>{bud_hdr}"]
-        acc_sp = acc_ld = 0.0
+        # Budget header — only sum active campaigns
+        acc_budget = sum(
+            bm.get(c.get("campaign_id", ""), 0) for c in data
+            if c.get("effective_status", "ACTIVE") == "ACTIVE"
+        )
+        bud_hdr = f" | 💰 <b>{rm(acc_budget)}/day</b>" if acc_budget > 0 else ""
+        lines   = [f"{emoji} <b>{_h(lbl)}</b>{bud_hdr}"]
+        acc_sp  = acc_ld = 0.0
 
         for c in data:
-            sp  = float(c.get("spend", 0))
-            cpm = float(c.get("cpm", 0))
-            ld  = get_actions_value(c.get("actions") or [], LEAD_ACTION_TYPES)
-            cpl = sp / ld if ld else 0
+            sp        = float(c.get("spend", 0))
+            cpm       = float(c.get("cpm", 0))
+            ld        = get_actions_value(c.get("actions") or [], LEAD_ACTION_TYPES)
+            cpl       = sp / ld if ld else 0
+            is_active = c.get("effective_status", "ACTIVE") == "ACTIVE"
             acc_sp += sp; acc_ld += ld
 
             name  = _h(c.get("campaign_name", "Unknown")[:38])
             ld_s  = f"{int(ld)} leads | CPL {rm(cpl)}{b_cpl(cpl)}" if ld else "0 leads ⚠️"
-            lines.append(f"  • <b>{name}</b>\n    {rm(sp)} | {ld_s} | CPM {rm(cpm)}{b_cpm(cpm)}")
+            # Status icon — only show if campaign has spent money
+            icon  = ("🟢" if is_active else "⏸️") if sp > 0 else "•"
+            lines.append(f"  {icon} <b>{name}</b>\n    {rm(sp)} | {ld_s} | CPM {rm(cpm)}{b_cpm(cpm)}")
 
             if sp >= 50 and ld == 0:
                 alerts.append(f"⚠️ <b>{_h(lbl)}</b> — {_h(c.get('campaign_name','')[:25])} {rm(sp)} 0 leads")
