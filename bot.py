@@ -46,7 +46,7 @@ MAIN_KBD = [
      {"text": "🔶 Darren",      "callback_data": "pick:3"}],
     [{"text": "🔴 Joey",        "callback_data": "pick:4"},
      {"text": "🟡 Am Prop",     "callback_data": "pick:5"}],
-    [{"text": "⚪ Maurice",     "callback_data": "pick:6"},
+    [{"text": "⚪ Jingyi",     "callback_data": "pick:6"},
      {"text": "🟤 Janice & WJ", "callback_data": "pick:7"}],
     [{"text": "🟠 Bobo Yeong",  "callback_data": "pick:8"}],
     [{"text": "⛳️ Pang",        "callback_data": "pick:9"}],
