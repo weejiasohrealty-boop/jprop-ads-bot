@@ -50,8 +50,8 @@ ACCOUNTS = [
     {"label": "Pang",             "emoji": "⛔️", "id": "act_266937751083201", "token_key": "TOKEN_JPROP"},
     {"label": "Chris",             "emoji": "🥎", "id": "act_296535961110870", "token_key": "TOKEN_JPROP"},
     {"label": "Daris",             "emoji": "🔥", "id": "act_1024488723347853", "token_key": "TOKEN_JPROP"},
-    {"label": "Grace",             "emoji": "🌸", "id": "act_862274193643687", "token_key": "TOKEN_JPROP"},
-    {"label": "Cheng",             "emoji": "🏐", "id": "act_666722343195100", "token_key": "TOKEN_JPROP"},
+    {"label": "Grace",             "emoji": "🌸", "id": "act_2316007738727018", "token_key": "TOKEN_JPROP"},
+    {"label": "Cheng",             "emoji": "🏐", "id": "act_1000278069552748", "token_key": "TOKEN_JPROP"},
 ]
 
 
