@@ -5,7 +5,7 @@ Uses raw aiohttp to call Telegram API directly.
 No python-telegram-bot dependency — works on any Python version.
 """
 import os, html, logging, asyncio
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from aiohttp import web, ClientSession, ClientTimeout
 from meta_api import (
     ACCOUNTS, fetch_all_accounts, fetch_single_account,
@@ -20,6 +20,12 @@ TOKEN   = os.environ["TELEGRAM_BOT_TOKEN"]
 PORT    = int(os.environ.get("PORT", 10000))
 TG      = f"https://api.telegram.org/bot{TOKEN}"
 MAX_LEN = 4000
+
+# ── Morning report config (set in Render environment) ──────────────
+# MORNING_CHAT_ID  : your Telegram chat ID  (send /chatid to the bot to find it)
+# MORNING_HOUR_UTC : hour to fire in UTC    (1 = 9am MYT, 0 = 8am MYT)
+MORNING_CHAT_ID  = int(os.environ.get("MORNING_CHAT_ID", "0"))
+MORNING_HOUR_UTC = int(os.environ.get("MORNING_HOUR_UTC", "1"))   # 1am UTC = 9am MYT
 
 DATE_LABELS = {
     "today":               "Today",
@@ -46,14 +52,14 @@ MAIN_KBD = [
      {"text": "🔶 Darren",      "callback_data": "pick:3"}],
     [{"text": "🔴 Joey",        "callback_data": "pick:4"},
      {"text": "🟡 Am Prop",     "callback_data": "pick:5"}],
-    [{"text": "⚪ Jingyi",     "callback_data": "pick:6"},
+    [{"text": "⚪ Jingyi",      "callback_data": "pick:6"},
      {"text": "🟤 Janice & WJ", "callback_data": "pick:7"}],
-    [{"text": "🟠 Bobo Yeong",  "callback_data": "pick:8"}],
-    [{"text": "⛳️ Pang",        "callback_data": "pick:9"}],
-     [{"text": "🔥 Daris",        "callback_data": "pick:11"}],
-     [{"text": "🌸 Grace",        "callback_data": "pick:12"}],
-    [{"text": "🏐 Cheng",        "callback_data": "pick:13"}],
-    [{"text": "❁ Hannah",        "callback_data": "pick:14"}],
+    [{"text": "🟠 Bobo",        "callback_data": "pick:8"},
+     {"text": "⛔️ Pang",        "callback_data": "pick:9"}],
+    [{"text": "🥎 Chris",       "callback_data": "pick:10"},
+     {"text": "🔥 Daris",       "callback_data": "pick:11"}],
+    [{"text": "🌸 Grace",       "callback_data": "pick:12"},
+     {"text": "🏐 Cheng",       "callback_data": "pick:13"}],
     [{"text": "📋 Weekly Report → Sheets", "callback_data": "weekly"}],
 ]
 
@@ -141,6 +147,8 @@ async def build_all(preset: str) -> str:
     parts    = [f"📊 <b>All Accounts — {label}</b>\n{'─'*30}"]
     alerts   = []
     gs = gl = g_budget = 0.0
+    best_cpl       = None
+    best_cpl_label = ""
 
     for r in results:
         emoji = r["emoji"]
@@ -167,8 +175,12 @@ async def build_all(preset: str) -> str:
 
         for c in data:
             sp        = float(c.get("spend", 0))
+            imp       = int(c.get("impressions", 0))
             cpm       = float(c.get("cpm", 0))
-            ld        = get_actions_value(c.get("actions") or [], LEAD_ACTION_TYPES)
+            acts      = c.get("actions") or []
+            ld        = get_actions_value(acts, LEAD_ACTION_TYPES)
+            hook      = get_actions_value(acts, {"video_view"})
+            hook_p    = hook / imp * 100 if imp else 0
             cpl       = sp / ld if ld else 0
             is_active = c.get("effective_status", "ACTIVE") == "ACTIVE"
             acc_sp += sp; acc_ld += ld
@@ -179,10 +191,20 @@ async def build_all(preset: str) -> str:
             icon  = ("🟢" if is_active else "⏸️") if sp > 0 else "•"
             lines.append(f"  {icon} <b>{name}</b>\n    {rm(sp)} | {ld_s} | CPM {rm(cpm)}{b_cpm(cpm)}")
 
-            if sp >= 50 and ld == 0:
+            # Alert: spent RM100+ but still zero leads
+            if sp >= 100 and ld == 0:
                 alerts.append(f"⚠️ <b>{_h(lbl)}</b> — {_h(c.get('campaign_name','')[:25])} {rm(sp)} 0 leads")
+            # Alert: CPL too high
             if ld > 0 and cpl > 50:
                 alerts.append(f"💸 <b>{_h(lbl)}</b> — {_h(c.get('campaign_name','')[:25])} CPL {rm(cpl)}{b_cpl(cpl)}")
+            # Alert: hook rate too low (require 1 000+ impressions to avoid noise)
+            if imp >= 1000 and hook_p < 15:
+                alerts.append(f"🎣 <b>{_h(lbl)}</b> — {_h(c.get('campaign_name','')[:25])} Hook {hook_p:.1f}% — fix first 3s")
+
+            # Track best CPL across all accounts
+            if ld > 0 and cpl > 0 and (best_cpl is None or cpl < best_cpl):
+                best_cpl       = cpl
+                best_cpl_label = f"{emoji} {lbl} · {c.get('campaign_name','')[:28]}"
 
         gs += acc_sp; gl += acc_ld; g_budget += acc_budget
         acpl   = acc_sp / acc_ld if acc_ld else 0
@@ -195,6 +217,11 @@ async def build_all(preset: str) -> str:
     cpl_t = f" | Avg CPL <b>{rm(gcpl)}</b>{b_cpl(gcpl)}" if gl else ""
     parts += [f"{'─'*30}",
               f"📦 <b>GRAND TOTAL</b>\n{bud_t}Spent <b>{rm(gs)}</b> | <b>{int(gl)} leads</b>{cpl_t}"]
+
+    # Best CPL highlight
+    if best_cpl is not None:
+        parts.append(f"🏆 <b>Best CPL:</b> {rm(best_cpl)} — {_h(best_cpl_label)}")
+
     if alerts:
         parts.append(f"🚨 <b>Alerts ({len(alerts)})</b>\n" + "\n".join(alerts))
     return "\n\n".join(parts)
@@ -225,7 +252,7 @@ async def build_single(idx: int, preset: str) -> str:
         bud = bm.get(c.get("campaign_id", ""), 0)
         tot_sp += sp; tot_ld += ld; tot_bud += bud
         parts.append(fmt_campaign(c, bm))
-        if sp >= 50 and ld == 0:
+        if sp >= 100 and ld == 0:
             alerts.append(f"⚠️ {_h(c.get('campaign_name','')[:30])} {rm(sp)} — 0 leads")
         if ld > 0 and cpl > 50:
             alerts.append(f"💸 CPL {rm(cpl)}{b_cpl(cpl)} — {_h(c.get('campaign_name','')[:30])}")
@@ -288,6 +315,9 @@ async def handle(update: dict) -> None:
                 await send(session, cid,
                            "👋 <b>JPROP Ads Assistant</b>\n\nTap a button to get your report:",
                            MAIN_KBD)
+            elif text.startswith("/chatid"):
+                # Use this to find your chat ID for MORNING_CHAT_ID env var
+                await send(session, cid, f"Your chat ID: <code>{cid}</code>")
             return
 
         # Button press
@@ -369,6 +399,43 @@ async def build_weekly_report(session: ClientSession, cid: int) -> None:
                f"Appt%, Cost/Appt will calculate automatically.",
                MAIN_KBD)
 
+# ── Daily morning report scheduler ────────────────────────────────
+
+async def daily_morning_report():
+    """
+    Fires at MORNING_HOUR_UTC every day and sends yesterday's summary
+    to MORNING_CHAT_ID.
+
+    Setup (Render environment variables):
+        MORNING_CHAT_ID  = <your Telegram chat ID>   ← /chatid to find it
+        MORNING_HOUR_UTC = 1                          ← 1am UTC = 9am MYT
+    """
+    if not MORNING_CHAT_ID:
+        log.info("MORNING_CHAT_ID not set — daily morning report disabled")
+        return
+    log.info(f"Morning report active → chat {MORNING_CHAT_ID} at {MORNING_HOUR_UTC:02d}:00 UTC")
+
+    while True:
+        now      = datetime.now(timezone.utc)
+        next_run = now.replace(hour=MORNING_HOUR_UTC, minute=0, second=0, microsecond=0)
+        if now >= next_run:
+            next_run += timedelta(days=1)
+        wait_secs = (next_run - now).total_seconds()
+        log.info(f"Next morning report in {wait_secs / 3600:.1f}h")
+        await asyncio.sleep(wait_secs)
+
+        log.info("Sending morning report…")
+        async with ClientSession() as session:
+            try:
+                report = await build_all("yesterday")
+                await send(
+                    session, MORNING_CHAT_ID,
+                    "🌅 <b>Good Morning! Yesterday's Summary</b>\n\n" + report,
+                    MAIN_KBD,
+                )
+            except Exception as e:
+                log.error(f"Morning report failed: {e}")
+
 # ── Long-polling loop ──────────────────────────────────────────────
 
 async def poll():
@@ -414,7 +481,8 @@ async def run():
     await runner.setup()
     await web.TCPSite(runner, "0.0.0.0", PORT).start()
     log.info(f"Health check on port {PORT}")
-    await poll()
+    # Run polling and morning scheduler concurrently
+    await asyncio.gather(poll(), daily_morning_report())
 
 if __name__ == "__main__":
     asyncio.run(run())
