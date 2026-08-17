@@ -44,16 +44,13 @@ ACCOUNTS = [
     {"label": "Darren",                 "emoji": "🔶", "id": "act_401868168645921",  "token_key": "TOKEN_JPROP"},
     {"label": "Joey Chaw",              "emoji": "🔴", "id": "act_789254227570709",  "token_key": "TOKEN_JPROP"},
     {"label": "Am Properties",          "emoji": "🟡", "id": "act_6220476828060673", "token_key": "TOKEN_JPROP"},
-    {"label": "Jingyi", "emoji": "⚪", "id": "act_9557313737693263",  "token_key": "TOKEN_JPROP"},
-    {"label": "Janice & WJ",            "emoji": "🟤", "id": "act_820487997381734",  "token_key": "TOKEN_JPROP"},
-    {"label": "Bobo Yeong",             "emoji": "🟠", "id": "act_1616708788537498", "token_key": "TOKEN_JPROP"},
-    {"label": "Pang",             "emoji": "⛔️", "id": "act_266937751083201", "token_key": "TOKEN_JPROP"},
-    {"label": "Chris",             "emoji": "🥎", "id": "act_296535961110870", "token_key": "TOKEN_JPROP"},
-    {"label": "Daris",             "emoji": "🔥", "id": "act_1024488723347853", "token_key": "TOKEN_JPROP"},
-    {"label": "Jet",             "emoji": "🌟", "id": "act_955584277458058", "token_key": "TOKEN_JPROP"},
-    {"label": "Cheng",             "emoji": "🏐", "id": "act_1000278069552748", "token_key": "TOKEN_JPROP"},
-    {"label": "Hannah",             "emoji": "⁕", "id": "act_1970417923796227", "token_key": "TOKEN_JPROP"},
-    {"label": "Jayden",             "emoji": "⁕", "id": "act_870160215193259", "token_key": "TOKEN_JPROP"},
+    {"label": "Janice", "emoji": "⚪", "id": "act_820487997381734",  "token_key": "TOKEN_JPROP"},
+    {"label": "Pang",            "emoji": "🟤", "id": "act_266937751083201",  "token_key": "TOKEN_JPROP"},
+    {"label": "Chris",             "emoji": "🟠", "id": "act_296535961110870", "token_key": "TOKEN_JPROP"},
+    {"label": "Jet",             "emoji": "⛔️", "id": "act_955584277458058", "token_key": "TOKEN_JPROP"},
+    {"label": "Cheng",             "emoji": "🥎", "id": "act_1000278069552748", "token_key": "TOKEN_JPROP"},
+    {"label": "Hannah",             "emoji": "🔥", "id": "act_1970417923796227", "token_key": "TOKEN_JPROP"},
+    {"label": "Jayden",             "emoji": "🌟", "id": "act_870160215193259", "token_key": "TOKEN_JPROP"},
 ]
 
 
