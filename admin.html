@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JPROP Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,wght@0,300;1,300&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#0a0a0a;--paper:#f7f5f0;--muted:rgba(247,245,240,0.5);--line:rgba(247,245,240,0.12);--gold:#b08d3e;--red:#e05555;--green:#4caf82;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--ink);color:var(--paper);font-family:'Inter',sans-serif;font-weight:300;min-height:100vh;}
+.serif{font-family:'Newsreader',serif;font-weight:300;font-style:italic;}
+#login-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;}
+.login-box{width:360px;text-align:center;}
+.login-box h1{font-family:'Newsreader',serif;font-weight:300;font-size:32px;margin-bottom:8px;}
+.login-box p{color:var(--muted);font-size:13px;margin-bottom:40px;}
+input{width:100%;background:rgba(247,245,240,0.06);border:1px solid var(--line);color:var(--paper);padding:14px 16px;font-size:14px;font-family:'Inter',sans-serif;font-weight:300;border-radius:4px;margin-bottom:12px;outline:none;transition:border 0.2s;}
+input:focus{border-color:var(--gold);}
+button{width:100%;background:var(--gold);color:var(--ink);border:none;padding:14px;font-size:13px;font-family:'Inter',sans-serif;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;cursor:pointer;border-radius:4px;transition:opacity 0.2s;}
+button:hover{opacity:0.85;}
+.err{color:var(--red);font-size:13px;margin-top:8px;}
+#app{display:none;}
+header{display:flex;align-items:center;justify-content:space-between;padding:20px 40px;border-bottom:1px solid var(--line);}
+.logo{font-size:14px;letter-spacing:0.12em;font-weight:400;}
+.logo span{color:var(--gold);}
+.logout-btn{background:none;border:1px solid var(--line);color:var(--muted);padding:8px 20px;font-size:12px;letter-spacing:0.08em;text-transform:uppercase;width:auto;border-radius:4px;}
+.tabs{display:flex;gap:0;border-bottom:1px solid var(--line);padding:0 40px;}
+.tab{padding:16px 24px;font-size:12px;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;transition:all 0.2s;}
+.tab.active{color:var(--gold);border-bottom-color:var(--gold);}
+.panel{display:none;padding:40px;}
+.panel.active{display:block;}
+.section-title{font-family:'Newsreader',serif;font-size:22px;font-weight:300;margin-bottom:24px;}
+.card{background:rgba(247,245,240,0.04);border:1px solid var(--line);border-radius:6px;padding:24px;margin-bottom:16px;}
+.row{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px;}
+.row input{flex:1;min-width:140px;margin-bottom:0;}
+.btn-sm{width:auto;padding:10px 20px;font-size:12px;}
+.btn-ghost{background:none;border:1px solid var(--line);color:var(--muted);}
+.btn-danger{background:var(--red);}
+table{width:100%;border-collapse:collapse;font-size:13px;}
+th{text-align:left;padding:10px 14px;color:var(--muted);font-weight:400;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;border-bottom:1px solid var(--line);}
+td{padding:12px 14px;border-bottom:1px solid rgba(247,245,240,0.06);vertical-align:middle;}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:rgba(247,245,240,0.03);}
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;letter-spacing:0.05em;}
+.badge-admin{background:rgba(176,141,62,0.2);color:var(--gold);}
+.badge-investor{background:rgba(247,245,240,0.08);color:var(--muted);}
+.camp-list{max-height:420px;overflow-y:auto;border:1px solid var(--line);border-radius:6px;}
+.camp-item{display:flex;align-items:center;gap:16px;padding:12px 16px;border-bottom:1px solid var(--line);cursor:pointer;transition:background 0.15s;}
+.camp-item:last-child{border-bottom:none;}
+.camp-item:hover{background:rgba(247,245,240,0.04);}
+.camp-item input[type=checkbox]{accent-color:var(--gold);width:16px;height:16px;cursor:pointer;}
+.camp-name{flex:1;font-size:13px;}
+.camp-acc{font-size:11px;color:var(--muted);}
+.camp-stat{font-size:12px;color:var(--gold);}
+.profit-input{background:rgba(247,245,240,0.06);border:1px solid var(--line);color:var(--paper);padding:8px 10px;font-size:13px;font-family:'Inter',sans-serif;border-radius:4px;width:110px;}
+.profit-input:focus{border-color:var(--gold);outline:none;}
+.profit-notes{width:180px;}
+.save-btn{background:var(--gold);color:var(--ink);border:none;padding:8px 16px;font-size:12px;font-family:'Inter',sans-serif;font-weight:500;border-radius:4px;cursor:pointer;width:auto;}
+.save-btn:hover{opacity:0.85;}
+select{background:rgba(247,245,240,0.06);border:1px solid var(--line);color:var(--paper);padding:10px 14px;font-size:13px;font-family:'Inter',sans-serif;border-radius:4px;outline:none;cursor:pointer;}
+select:focus{border-color:var(--gold);}
+.notice{color:var(--muted);font-size:13px;padding:20px;text-align:center;}
+.preset-bar{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;}
+.preset-btn{background:none;border:1px solid var(--line);color:var(--muted);padding:8px 16px;font-size:12px;letter-spacing:0.06em;width:auto;border-radius:4px;}
+.preset-btn.active{border-color:var(--gold);color:var(--gold);}
+.toast{position:fixed;bottom:24px;right:24px;background:var(--gold);color:var(--ink);padding:12px 24px;border-radius:4px;font-size:13px;font-weight:500;display:none;z-index:999;}
+</style>
+</head>
+<body>
+<div id="login-screen">
+  <div class="login-box">
+    <h1>JPROP <span class="serif">Admin</span></h1>
+    <p>Investor Dashboard Management</p>
+    <input id="l-email" type="email" placeholder="Admin email" />
+    <input id="l-pw" type="password" placeholder="Password" />
+    <button onclick="doLogin()">Sign In</button>
+    <div id="l-err" class="err"></div>
+  </div>
+</div>
+<div id="app">
+  <header>
+    <div class="logo">JP<span>R</span>OP <span style="color:var(--muted);font-weight:300;font-size:12px;margin-left:8px;">Admin Panel</span></div>
+    <button class="logout-btn" onclick="logout()">Sign Out</button>
+  </header>
+  <div class="tabs">
+    <div class="tab active" onclick="switchTab('investors')">Investors</div>
+    <div class="tab" onclick="switchTab('assign')">Assign Campaigns</div>
+    <div class="tab" onclick="switchTab('profit')">Profit Entry</div>
+  </div>
+  <div id="tab-investors" class="panel active">
+    <div style="display:flex;gap:40px;flex-wrap:wrap;">
+      <div style="flex:1;min-width:280px;">
+        <div class="section-title">Add Investor</div>
+        <div class="card">
+          <input id="i-name" placeholder="Full name" style="margin-bottom:12px;" />
+          <input id="i-email" type="email" placeholder="Email address" style="margin-bottom:12px;" />
+          <input id="i-pw" type="password" placeholder="Password" style="margin-bottom:16px;" />
+          <button class="btn-sm" onclick="createInvestor()">Create Account</button>
+        </div>
+      </div>
+      <div style="flex:2;min-width:360px;">
+        <div class="section-title">All Accounts</div>
+        <table id="investor-table">
+          <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Created</th><th></th></tr></thead>
+          <tbody id="investor-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <div id="tab-assign" class="panel">
+    <div class="section-title">Assign Campaigns to Investor</div>
+    <div style="display:flex;gap:16px;align-items:center;margin-bottom:20px;flex-wrap:wrap;">
+      <select id="assign-investor" onchange="loadAssign()" style="min-width:200px;">
+        <option value="">— Select investor —</option>
+      </select>
+      <div class="preset-bar" style="margin:0;">
+        <button class="preset-btn active" onclick="setPreset('last_week_sun_sat',this)">Last Week</button>
+        <button class="preset-btn" onclick="setPreset('this_week_sun_today',this)">This Week</button>
+        <button class="preset-btn" onclick="setPreset('this_month',this)">This Month</button>
+        <button class="preset-btn" onclick="setPreset('last_month',this)">Last Month</button>
+      </div>
+    </div>
+    <div id="assign-area" class="notice">Select an investor to see campaigns</div>
+  </div>
+  <div id="tab-profit" class="panel">
+    <div class="section-title">Campaign Profit &amp; Revenue</div>
+    <p style="color:var(--muted);font-size:13px;margin-bottom:20px;">Key in revenue, cost, and profit for each campaign. Investors will see these figures in their dashboard.</p>
+    <div style="overflow-x:auto;">
+      <table>
+        <thead>
+          <tr>
+            <th>Campaign</th><th>Account</th>
+            <th>Closing Sales</th><th>Nett Sales (RM)</th>
+            <th>Commission (RM)</th><th>ROI</th><th>Notes</th><th></th>
+          </tr>
+        </thead>
+        <tbody id="profit-tbody"></tbody>
+      </table>
+    </div>
+    <div id="profit-notice" class="notice">Loading campaigns…</div>
+  </div>
+</div>
+<div id="toast" class="toast"></div>
+<script>
+const API = '';
+let TOKEN = localStorage.getItem('jprop_admin_token') || '';
+let currentPreset = 'last_week_sun_sat';
+let allCampaigns = [];
+let currentAssignments = new Set();
+function api(path, opts={}) {
+  return fetch(API + path, {
+    headers: { 'Authorization': `Bearer ${TOKEN}`, 'Content-Type': 'application/json', ...opts.headers },
+    ...opts,
+  }).then(r => {
+    if (r.status === 401) { logout(); throw new Error('Unauthorized'); }
+    return r.json();
+  });
+}
+function toast(msg, ok=true) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.style.background = ok ? 'var(--gold)' : 'var(--red)';
+  el.style.display = 'block';
+  setTimeout(() => el.style.display='none', 2500);
+}
+async function doLogin() {
+  const email = document.getElementById('l-email').value;
+  const pw    = document.getElementById('l-pw').value;
+  const res   = await fetch(API+'/api/login', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({email, password:pw})
+  });
+  const data = await res.json();
+  if (!res.ok) { document.getElementById('l-err').textContent = data.detail; return; }
+  if (data.role !== 'admin') { document.getElementById('l-err').textContent = 'Admin access only.'; return; }
+  TOKEN = data.token;
+  localStorage.setItem('jprop_admin_token', TOKEN);
+  showApp();
+}
+function logout() {
+  localStorage.removeItem('jprop_admin_token');
+  TOKEN = '';
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+}
+function showApp() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  loadInvestors();
+  loadAllCampaigns();
+}
+if (TOKEN) showApp();
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach((t,i) => {
+    const names = ['investors','assign','profit'];
+    t.classList.toggle('active', names[i]===name);
+  });
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+}
+async function loadInvestors() {
+  const data = await api('/api/admin/investors');
+  const tbody = document.getElementById('investor-tbody');
+  const sel   = document.getElementById('assign-investor');
+  tbody.innerHTML = '';
+  sel.innerHTML   = '<option value="">— Select investor —</option>';
+  data.forEach(u => {
+    tbody.innerHTML += `<tr><td>${u.name}</td><td style="color:var(--muted)">${u.email}</td><td><span class="badge badge-${u.role}">${u.role}</span></td><td style="color:var(--muted);font-size:12px">${u.created_at.slice(0,10)}</td><td>${u.role!=='admin'?`<button class="btn-sm btn-danger" onclick="delInvestor(${u.id},'${u.name}')">Remove</button>`:''}</td></tr>`;
+    if (u.role === 'investor') sel.innerHTML += `<option value="${u.id}">${u.name} (${u.email})</option>`;
+  });
+}
+async function createInvestor() {
+  const name  = document.getElementById('i-name').value.trim();
+  const email = document.getElementById('i-email').value.trim();
+  const pw    = document.getElementById('i-pw').value;
+  if (!name||!email||!pw) { toast('Fill all fields',false); return; }
+  await api('/api/admin/investors', { method:'POST', body: JSON.stringify({name,email,password:pw}) });
+  document.getElementById('i-name').value = '';
+  document.getElementById('i-email').value = '';
+  document.getElementById('i-pw').value = '';
+  toast('✅ '+name+' created');
+  loadInvestors();
+}
+async function delInvestor(id, name) {
+  if (!confirm('Remove '+name+'?')) return;
+  await api('/api/admin/investors/'+id, {method:'DELETE'});
+  toast('Removed '+name);
+  loadInvestors();
+}
+async function loadAllCampaigns() {
+  document.getElementById('profit-notice').textContent = 'Loading campaigns…';
+  allCampaigns = await api('/api/admin/campaigns?preset='+currentPreset);
+  renderProfitTable();
+}
+function setPreset(preset, btn) {
+  currentPreset = preset;
+  document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  loadAllCampaigns();
+  const uid = document.getElementById('assign-investor').value;
+  if (uid) loadAssign();
+}
+async function loadAssign() {
+  const uid = document.getElementById('assign-investor').value;
+  if (!uid) { document.getElementById('assign-area').innerHTML = '<div class="notice">Select an investor</div>'; return; }
+  const [campaigns, existing] = await Promise.all([
+    api('/api/admin/campaigns?preset='+currentPreset),
+    api('/api/admin/assignments/'+uid)
+  ]);
+  currentAssignments = new Set(existing.map(a => a.campaign_id));
+  const html = campaigns.map(c => '<div class="camp-item" onclick="toggleAssign(this,''+uid+'','+c.account_idx+',''+c.campaign_id+'',''+c.campaign_name.replace(/'/g,"\'")+'')"><input type="checkbox" '+(currentAssignments.has(c.campaign_id)?'checked':'')+' onclick="event.stopPropagation();toggleAssign(this.closest('.camp-item'),''+uid+'','+c.account_idx+',''+c.campaign_id+'',''+c.campaign_name.replace(/'/g,"\'")+'')"><div class="camp-name">'+c.campaign_name+'<br><span class="camp-acc">'+c.account_label+'</span></div><div class="camp-stat">RM'+c.spend+' · '+c.leads+' leads</div></div>').join('');
+  document.getElementById('assign-area').innerHTML = '<div class="camp-list">'+html+'</div>';
+}
+async function toggleAssign(el, uid, accIdx, cid, cname) {
+  const cb = el.querySelector('input[type=checkbox]');
+  if (currentAssignments.has(cid)) {
+    await api('/api/admin/assign?user_id='+uid+'&campaign_id='+encodeURIComponent(cid), {method:'DELETE'});
+    currentAssignments.delete(cid); cb.checked = false; toast('Campaign unassigned');
+  } else {
+    await api('/api/admin/assign', {method:'POST', body: JSON.stringify({user_id:parseInt(uid),account_idx:accIdx,campaign_id:cid,campaign_name:cname})});
+    currentAssignments.add(cid); cb.checked = true; toast('Campaign assigned ✅');
+  }
+}
+async function renderProfitTable() {
+  const profits = await api('/api/admin/profits');
+  const profitMap = {};
+  profits.forEach(p => profitMap[p.campaign_id] = p);
+  const tbody = document.getElementById('profit-tbody');
+  document.getElementById('profit-notice').style.display = 'none';
+  tbody.innerHTML = allCampaigns.map(c => {
+    const p = profitMap[c.campaign_id] || {};
+    const roi = (p.commission && c.spend) ? (p.commission/c.spend).toFixed(2)+'x' : '—';
+    return '<tr><td><div style="font-size:13px;">'+c.campaign_name+'</div><div style="font-size:11px;color:var(--muted)">Spend: RM'+c.spend+' · '+c.leads+' leads</div></td><td style="color:var(--muted);font-size:12px;">'+c.account_label+'</td><td><input class="profit-input" id="cls-'+c.campaign_id+'" type="number" placeholder="0" value="'+(p.closing_sales||'')+'" style="width:80px;" /></td><td><input class="profit-input" id="nett-'+c.campaign_id+'" type="number" placeholder="0" value="'+(p.nett_sales||'')+'" /></td><td><input class="profit-input" id="comm-'+c.campaign_id+'" type="number" placeholder="0" value="'+(p.commission||'')+'" onchange="updateRoi(''+c.campaign_id+'','+c.spend+')" /></td><td id="roi-'+c.campaign_id+'" style="color:var(--green);font-weight:500;">'+roi+'</td><td><input class="profit-input profit-notes" id="note-'+c.campaign_id+'" type="text" placeholder="Optional" value="'+(p.notes||'')+'" /></td><td><button class="save-btn" onclick="saveProfit(''+c.campaign_id+'',''+c.campaign_name.replace(/'/g,"\'")+'')">Save</button></td></tr>';
+  }).join('');
+}
+function updateRoi(cid, spend) {
+  const comm = parseFloat(document.getElementById('comm-'+cid).value) || 0;
+  const roi = (comm && spend) ? (comm/spend).toFixed(2)+'x' : '—';
+  document.getElementById('roi-'+cid).textContent = roi;
+}
+async function saveProfit(cid, cname) {
+  const closing_sales = parseInt(document.getElementById('cls-'+cid).value) || 0;
+  const nett_sales    = parseFloat(document.getElementById('nett-'+cid).value) || 0;
+  const commission    = parseFloat(document.getElementById('comm-'+cid).value) || 0;
+  const notes         = document.getElementById('note-'+cid).value;
+  await api('/api/admin/profit', {method:'POST', body: JSON.stringify({campaign_id:cid,campaign_name:cname,closing_sales,nett_sales,commission,notes})});
+  toast('Saved ✅');
+}
+</script>
+</body>
+</html>
