@@ -63,8 +63,18 @@ select:focus{border-color:var(--gold);}
 .preset-bar{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;}
 .preset-btn{background:none;border:1px solid var(--line);color:var(--muted);padding:8px 16px;font-size:12px;letter-spacing:0.06em;width:auto;border-radius:4px;}
 .preset-btn.active{border-color:var(--gold);color:var(--gold);}
+.metric-cards{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px;}
+.metric-card{background:rgba(247,245,240,0.04);border:1px solid var(--line);border-radius:6px;padding:16px 20px;flex:1;min-width:110px;}
+.metric-card .mval{font-family:'Newsreader',serif;font-size:26px;color:var(--gold);font-weight:300;}
+.metric-card .mlbl{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-top:4px;}
+.signal{display:inline-block;padding:2px 8px;border-radius:3px;font-size:12px;font-weight:500;}
+.sig-green{background:rgba(76,175,130,0.2);color:var(--green);}
+.sig-yellow{background:rgba(176,141,62,0.15);color:var(--gold);}
+.sig-red{background:rgba(224,85,85,0.2);color:var(--red);}
+#analytics-chart{background:rgba(247,245,240,0.02);border:1px solid var(--line);border-radius:6px;padding:12px;margin-bottom:24px;}
 .toast{position:fixed;bottom:24px;right:24px;background:var(--gold);color:var(--ink);padding:12px 24px;border-radius:4px;font-size:13px;font-weight:500;display:none;z-index:999;}
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 </head>
 <body>
 <div id="login-screen">
@@ -86,6 +96,7 @@ select:focus{border-color:var(--gold);}
     <div class="tab active" onclick="switchTab('investors')">Investors</div>
     <div class="tab" onclick="switchTab('assign')">Assign Campaigns</div>
     <div class="tab" onclick="switchTab('profit')">Profit Entry</div>
+    <div class="tab" onclick="switchTab('analytics')">Analytics</div>
   </div>
   <div id="tab-investors" class="panel active">
     <div style="display:flex;gap:40px;flex-wrap:wrap;">
@@ -140,6 +151,36 @@ select:focus{border-color:var(--gold);}
     <div id="profit-notice" class="notice">Loading campaigns…</div>
   </div>
 </div>
+
+  <div id="tab-analytics" class="panel">
+    <div class="section-title">Ad Account Analytics</div>
+    <div style="display:flex;gap:16px;align-items:center;margin-bottom:20px;flex-wrap:wrap;">
+      <select id="analytics-account" onchange="loadAnalytics()" style="min-width:220px;">
+        <option value="">&#8212; Select account &#8212;</option>
+      </select>
+      <div class="preset-bar" style="margin:0;" id="analytics-presets">
+        <button class="preset-btn active" onclick="setAnalyticsPreset('last_week_sun_sat',this)">Last Week</button>
+        <button class="preset-btn" onclick="setAnalyticsPreset('this_week_sun_today',this)">This Week</button>
+        <button class="preset-btn" onclick="setAnalyticsPreset('this_month',this)">This Month</button>
+        <button class="preset-btn" onclick="setAnalyticsPreset('last_month',this)">Last Month</button>
+      </div>
+    </div>
+    <div id="analytics-summary" style="display:none;">
+      <div class="metric-cards" id="analytics-cards"></div>
+      <canvas id="analytics-chart" style="max-height:240px;"></canvas>
+      <div style="overflow-x:auto;margin-top:16px;">
+        <table>
+          <thead><tr>
+            <th>Campaign</th><th>Status</th><th>Budget/day</th>
+            <th>Spend</th><th>Leads</th><th>CPL</th><th>CPM</th>
+            <th>Hook%</th><th>Thru%</th><th>CTR%</th>
+          </tr></thead>
+          <tbody id="analytics-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+    <div id="analytics-notice" class="notice">Select an account to view analytics</div>
+  </div>
 <div id="toast" class="toast"></div>
 <script>
 const API = '';
@@ -188,11 +229,12 @@ function showApp() {
   document.getElementById('app').style.display = 'block';
   loadInvestors();
   loadAllCampaigns();
+  initAnalyticsAccounts();
 }
 if (TOKEN) showApp();
 function switchTab(name) {
   document.querySelectorAll('.tab').forEach((t,i) => {
-    const names = ['investors','assign','profit'];
+    const names = ['investors','assign','profit','analytics'];
     t.classList.toggle('active', names[i]===name);
   });
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
@@ -270,7 +312,7 @@ async function renderProfitTable() {
   tbody.innerHTML = allCampaigns.map(c => {
     const p = profitMap[c.campaign_id] || {};
     const roi = (p.commission && c.spend) ? (p.commission/c.spend).toFixed(2)+'x' : '—';
-    return '<tr><td><div style="font-size:13px;">'+c.campaign_name+'</div><div style="font-size:11px;color:var(--muted)">Spend: RM'+c.spend+' · '+c.leads+' leads</div></td><td style="color:var(--muted);font-size:12px;">'+c.account_label+'</td><td><input class="profit-input" id="cls-'+c.campaign_id+'" type="number" placeholder="0" value="'+(p.closing_sales||'')+'" style="width:80px;" /></td><td><input class="profit-input" id="nett-'+c.campaign_id+'" type="number" placeholder="0" value="'+(p.nett_sales||'')+'" /></td><td><input class="profit-input" id="comm-'+c.campaign_id+'" type="number" placeholder="0" value="'+(p.commission||'')+'" onchange="updateRoi(\''+c.campaign_id+'\','+c.spend+')" /></td><td id="roi-'+c.campaign_id+'" style="color:var(--green);font-weight:500;">'+roi+'</td><td><input class="profit-input profit-notes" id="note-'+c.campaign_id+'" type="text" placeholder="Optional" value="'+(p.notes||'')+'" /></td><td><button class="save-btn" onclick="saveProfit(\''+c.campaign_id+'\',\''+c.campaign_name.replace(/\'/g,"\\'")+'\')">'+'Save</button></td></tr>';
+    return '<tr><td><div style="font-size:13px;">'+c.campaign_name+'</div><div style="font-size:11px;color:var(--muted)">Spend: RM'+c.spend+' · '+c.leads+' leads</div></td><td style="color:var(--muted);font-size:12px;">'+c.account_label+'</td><td><input class="profit-input" id="cls-'+c.campaign_id+'" type="number" placeholder="0" value="'+(p.closing_sales||'')+'" style="width:80px;" /></td><td><input class="profit-input" id="nett-'+c.campaign_id+'" type="number" placeholder="0" value="'+(p.nett_sales||'')+'" /></td><td><input class="profit-input" id="comm-'+c.campaign_id+'" type="number" placeholder="0" value="'+(p.commission||'')+'" onchange="updateRoi(\''+c.campaign_id+'\','+c.spend+')" /></td><td id="roi-'+c.campaign_id+'" style="color:var(--green);font-weight:500;">'+roi+'</td><td><input class="profit-input profit-notes" id="note-'+c.campaign_id+'" type="text" placeholder="Optional" value="'+(p.notes||'')+'" /></td><td><button class="save-btn" onclick="saveProfit(\''+c.campaign_id+'\',\''+c.campaign_name.replace(/\'/g,"\\'")+'\')">Save</button></td></tr>';
   }).join('');
 }
 function updateRoi(cid, spend) {
@@ -286,6 +328,83 @@ async function saveProfit(cid, cname) {
   await api('/api/admin/profit', {method:'POST', body: JSON.stringify({campaign_id:cid,campaign_name:cname,closing_sales,nett_sales,commission,notes})});
   toast('Saved ✅');
 }
+
+let analyticsPreset = 'last_week_sun_sat';
+let analyticsChart = null;
+async function initAnalyticsAccounts() {
+  const accounts = await api('/api/admin/accounts');
+  const sel = document.getElementById('analytics-account');
+  accounts.forEach(a => { const opt = document.createElement('option'); opt.value = a.idx; opt.textContent = a.emoji + ' ' + a.label; sel.appendChild(opt); });
+}
+function setAnalyticsPreset(preset, btn) {
+  analyticsPreset = preset;
+  document.querySelectorAll('#analytics-presets .preset-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  loadAnalytics();
+}
+async function loadAnalytics() {
+  const idx = document.getElementById('analytics-account').value;
+  if (idx === '') return;
+  const notice = document.getElementById('analytics-notice');
+  notice.textContent = 'Loading…'; notice.style.display = 'block';
+  document.getElementById('analytics-summary').style.display = 'none';
+  try {
+    const data = await api('/api/admin/account-report?account_idx='+idx+'&preset='+analyticsPreset);
+    if (data.error) { notice.textContent = '❌ ' + data.error.message; return; }
+    if (!data.campaigns || data.campaigns.length === 0) { notice.textContent = 'No campaigns for this period.'; return; }
+    notice.style.display = 'none';
+    document.getElementById('analytics-summary').style.display = 'block';
+    renderAnalytics(data);
+  } catch(e) { notice.textContent = '❌ Error: ' + e.message; }
+}
+function sig(val, type) {
+  let cls = 'sig-yellow';
+  if (type==='cpl') cls = val===0?'sig-yellow':(val<=50?'sig-green':val<=100?'sig-yellow':'sig-red');
+  else if (type==='hook') cls = val>=30?'sig-green':val>=15?'sig-yellow':'sig-red';
+  else if (type==='thru') cls = val>=10?'sig-green':val>=5?'sig-yellow':'sig-red';
+  else if (type==='ctr')  cls = val>=1.0?'sig-green':val>=0.5?'sig-yellow':'sig-red';
+  else if (type==='cpm')  cls = val<=80?'sig-green':val<=150?'sig-yellow':'sig-red';
+  return '<span class="signal '+cls+'">'+val+'</span>';
+}
+function renderAnalytics(data) {
+  const camps = data.campaigns;
+  const tSpend = camps.reduce((s,c)=>s+c.spend,0);
+  const tLeads = camps.reduce((s,c)=>s+c.leads,0);
+  const avgCPL = tLeads>0?(tSpend/tLeads).toFixed(2):0;
+  const avgCPM = camps.length>0?(camps.reduce((s,c)=>s+c.cpm,0)/camps.length).toFixed(2):0;
+  document.getElementById('analytics-cards').innerHTML =
+    '<div class="metric-card"><div class="mval">RM'+Math.round(tSpend)+'</div><div class="mlbl">Total Spend</div></div>'+
+    '<div class="metric-card"><div class="mval">'+tLeads+'</div><div class="mlbl">Total Leads</div></div>'+
+    '<div class="metric-card"><div class="mval">RM'+avgCPL+'</div><div class="mlbl">Avg CPL</div></div>'+
+    '<div class="metric-card"><div class="mval">RM'+avgCPM+'</div><div class="mlbl">Avg CPM</div></div>'+
+    '<div class="metric-card"><div class="mval">'+camps.length+'</div><div class="mlbl">Campaigns</div></div>';
+  if (analyticsChart) { analyticsChart.destroy(); analyticsChart = null; }
+  const ctx = document.getElementById('analytics-chart').getContext('2d');
+  analyticsChart = new Chart(ctx, {
+    data: { labels: camps.map(c=>c.campaign_name.slice(0,22)),
+      datasets: [
+        {type:'bar',label:'Spend (RM)',data:camps.map(c=>c.spend),backgroundColor:'rgba(176,141,62,0.35)',borderColor:'#b08d3e',borderWidth:1,yAxisID:'y'},
+        {type:'line',label:'CPL (RM)',data:camps.map(c=>c.cpl),borderColor:'#e05555',backgroundColor:'rgba(224,85,85,0.1)',pointBackgroundColor:'#e05555',tension:0.3,yAxisID:'y1'}
+      ]
+    },
+    options:{ responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+      plugins:{legend:{labels:{color:'rgba(247,245,240,0.6)',font:{size:11}}}},
+      scales:{
+        x:{ticks:{color:'rgba(247,245,240,0.4)',font:{size:10},maxRotation:35},grid:{color:'rgba(247,245,240,0.05)'}},
+        y:{position:'left',ticks:{color:'rgba(247,245,240,0.4)',font:{size:10}},grid:{color:'rgba(247,245,240,0.05)'},title:{display:true,text:'Spend (RM)',color:'#b08d3e',font:{size:11}}},
+        y1:{position:'right',ticks:{color:'rgba(224,85,85,0.6)',font:{size:10}},grid:{drawOnChartArea:false},title:{display:true,text:'CPL (RM)',color:'#e05555',font:{size:11}}}
+      }
+    }
+  });
+  document.getElementById('analytics-tbody').innerHTML = camps.map(c => {
+    const icon = c.status==='ACTIVE'?'🟢':(c.status==='PAUSED'?'⏸️':'📌');
+    const bud = c.daily_budget>0?'RM'+Math.round(c.daily_budget):'&#8212;';
+    const ld = c.leads>0?c.leads:'<span style="color:var(--red)">0 ⚠️</span>';
+    const cplS = c.leads>0?sig(c.cpl,'cpl'):'&#8212;';
+    return '<tr><td style="font-size:12px;">'+c.campaign_name+'</td><td>'+icon+'</td><td style="color:var(--muted);font-size:12px;">'+bud+'</td><td><b>RM'+c.spend+'</b></td><td>'+ld+'</td><td>'+cplS+'</td><td>'+sig(c.cpm,'cpm')+'</td><td>'+sig(c.hook_pct,'hook')+'</td><td>'+sig(c.thru_pct,'thru')+'</td><td>'+sig(c.ctr,'ctr')+'</td></tr>';
+  }).join('');
+}
+
 </script>
 </body>
 </html>
