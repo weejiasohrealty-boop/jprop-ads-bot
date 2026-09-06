@@ -1,0 +1,17 @@
+name: Keep Services Alive
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping JPROP Dashboard
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://jprop-dashboard.onrender.com/)
+          echo "Dashboard: $STATUS"
+      - name: Ping JPROP Bot
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://jprop-ads-bot.onrender.com/)
+          echo "Bot: $STATUS"
