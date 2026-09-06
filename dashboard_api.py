@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+import pathlib
+BASE_DIR = pathlib.Path(__file__).parent
 """
 dashboard_api.py — JPROP Investor Dashboard API
 FastAPI backend. Run with: uvicorn dashboard_api:app --host 0.0.0.0 --port 8000
@@ -38,14 +40,14 @@ SECRET         = os.environ.get("DASHBOARD_SECRET", "change-me-now")
 ADMIN_EMAIL    = os.environ.get("ADMIN_EMAIL", "wj@jprop.com")
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "jprop2024")
 
-# ── Startup ────────────────────────────────────────────────────────
+# ── Startup ──────────────────────────────────────────────
 
 @app.on_event("startup")
 def startup():
     init_db()
     create_user("WJ Admin", ADMIN_EMAIL, ADMIN_PASSWORD, "admin")  # no-op if exists
 
-# ── Token helpers ──────────────────────────────────────────────────
+# ── Token helpers ──────────────────────────────────────────
 
 def _make_token(user_id: int, role: str) -> str:
     ts = int(datetime.now(timezone.utc).timestamp())
@@ -78,7 +80,7 @@ def admin_only(user=Depends(current_user)):
         raise HTTPException(403, "Admin only")
     return user
 
-# ── Auth ───────────────────────────────────────────────────────────
+# ── Auth ─────────────────────────────────────────────────
 
 class LoginReq(BaseModel):
     email: str
@@ -95,7 +97,7 @@ def login(req: LoginReq):
         "name":  user["name"],
     }
 
-# ── Admin: investors ───────────────────────────────────────────────
+# ── Admin: investors ─────────────────────────────────────────
 
 class CreateInvestorReq(BaseModel):
     name: str
@@ -126,7 +128,7 @@ def reset_pw(user_id: int, req: ResetPwReq, _=Depends(admin_only)):
     update_password(user_id, req.new_password)
     return {"ok": True}
 
-# ── Admin: campaigns (live from Meta) ─────────────────────────────
+# ── Admin: campaigns (live from Meta) ─────────────────────
 
 @app.get("/api/admin/campaigns")
 async def all_campaigns(preset: str = "last_week_sun_sat", _=Depends(admin_only)):
@@ -150,7 +152,7 @@ async def all_campaigns(preset: str = "last_week_sun_sat", _=Depends(admin_only)
             })
     return out
 
-# ── Admin: assignments ─────────────────────────────────────────────
+# ── Admin: assignments ─────────────────────────────────────────
 
 class AssignReq(BaseModel):
     user_id:       int
@@ -172,7 +174,7 @@ def do_unassign(user_id: int, campaign_id: str, _=Depends(admin_only)):
 def investor_assignments(user_id: int, _=Depends(admin_only)):
     return get_assignments(user_id)
 
-# ── Admin: profit entry ────────────────────────────────────────────
+# ── Admin: profit entry ─────────────────────────────────────────
 
 class ProfitReq(BaseModel):
     campaign_id:   str
@@ -193,7 +195,7 @@ def save_profit(req: ProfitReq, _=Depends(admin_only)):
 def all_profits(_=Depends(admin_only)):
     return list_profits()
 
-# ── Investor: dashboard ────────────────────────────────────────────
+# ── Investor: dashboard ─────────────────────────────────────────
 
 @app.get("/api/dashboard")
 async def investor_dashboard(preset: str = "last_week_sun_sat", user=Depends(current_user)):
@@ -201,7 +203,6 @@ async def investor_dashboard(preset: str = "last_week_sun_sat", user=Depends(cur
     if not assignments:
         return {"campaigns": [], "totals": {"spend": 0, "leads": 0, "cpl": 0, "closing_sales": 0, "nett_sales": 0, "commission": 0, "roi": 0}}
 
-    # Group by account to batch API calls
     by_acc: dict[int, set] = {}
     for a in assignments:
         by_acc.setdefault(a["account_idx"], set()).add(a["campaign_id"])
@@ -248,12 +249,12 @@ async def investor_dashboard(preset: str = "last_week_sun_sat", user=Depends(cur
     totals["roi"] = round(totals["commission"] / totals["spend"], 2) if totals["spend"] and totals["commission"] else 0
     return {"campaigns": campaigns, "totals": totals}
 
-# ── Serve HTML files ───────────────────────────────────────────────
+# ── Serve HTML files ───────────────────────────────────────────
 
 @app.get("/", response_class=HTMLResponse)
 def serve_dashboard():
-    return FileResponse("dashboard.html")
+    return FileResponse(BASE_DIR / "dashboard.html")
 
 @app.get("/admin", response_class=HTMLResponse)
 def serve_admin():
-    return FileResponse("admin.html")
+    return FileResponse(BASE_DIR / "admin.html")
