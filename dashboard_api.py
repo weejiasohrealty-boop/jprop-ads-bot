@@ -258,3 +258,30 @@ def serve_dashboard():
 @app.get("/admin", response_class=HTMLResponse)
 def serve_admin():
     return FileResponse(BASE_DIR / "admin.html")
+
+
+@app.get("/api/admin/accounts")
+def list_accounts(_=Depends(admin_only)):
+    return [{"idx": i, "label": a["label"], "emoji": a["emoji"]} for i, a in enumerate(ACCOUNTS)]
+
+@app.get("/api/admin/account-report")
+async def account_report(account_idx: int, preset: str = "last_week_sun_sat", _=Depends(admin_only)):
+    r = await fetch_single_account(account_idx, preset)
+    bm = r.get("budget_map", {})
+    out = []
+    for c in (r.get("data") or []):
+        sp = float(c.get("spend", 0)); imp = int(c.get("impressions", 0))
+        acts = c.get("actions") or []; thru_a = c.get("video_thruplay_watched_actions") or []
+        ld = get_actions_value(acts, LEAD_ACTION_TYPES)
+        hook = get_actions_value(acts, {"video_view"})
+        thru = sum(float(a.get("value", 0)) for a in thru_a)
+        hook_p = round(hook / imp * 100, 1) if imp else 0
+        thru_p = round(thru / imp * 100, 1) if imp else 0
+        cpl = round(sp / ld, 2) if ld else 0
+        cpm = round(float(c.get("cpm", 0)), 2); ctr = round(float(c.get("ctr", 0)), 2)
+        budget = bm.get(c.get("campaign_id", ""), 0)
+        out.append({"campaign_id": c.get("campaign_id",""), "campaign_name": c.get("campaign_name",""),
+            "status": c.get("effective_status","UNKNOWN"), "spend": round(sp,2), "impressions": imp,
+            "leads": int(ld), "cpl": cpl, "cpm": cpm, "ctr": ctr, "hook_pct": hook_p,
+            "thru_pct": thru_p, "daily_budget": round(budget,2)})
+    return {"label": r["label"], "emoji": r.get("emoji",""), "campaigns": out, "error": r.get("error")}
