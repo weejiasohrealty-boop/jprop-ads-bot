@@ -5,3 +5,4 @@ google-auth==2.29.0
 fastapi
 uvicorn[standard]
 python-multipart
+psycopg2-binary
