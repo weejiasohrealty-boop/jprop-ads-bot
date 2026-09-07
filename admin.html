@@ -3,408 +3,875 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>JPROP Admin</title>
-<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,wght@0,300;1,300&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+<title>JPROP — Admin Portal</title>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,wght@0,300;1,300&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
-:root{--ink:#0a0a0a;--paper:#f7f5f0;--muted:rgba(247,245,240,0.5);--line:rgba(247,245,240,0.12);--gold:#b08d3e;--red:#e05555;--green:#4caf82;}
+:root{--ink:#0a0a0a;--paper:#f7f5f0;--muted:rgba(247,245,240,0.45);--line:rgba(247,245,240,0.09);--gold:#b08d3e;--green:#4caf82;--red:#e05555;--yellow:#e0b755;--blue:#5b8dee;--surface:rgba(247,245,240,0.03);}
 *{margin:0;padding:0;box-sizing:border-box;}
 body{background:var(--ink);color:var(--paper);font-family:'Inter',sans-serif;font-weight:300;min-height:100vh;}
-.serif{font-family:'Newsreader',serif;font-weight:300;font-style:italic;}
-#login-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;}
-.login-box{width:360px;text-align:center;}
-.login-box h1{font-family:'Newsreader',serif;font-weight:300;font-size:32px;margin-bottom:8px;}
-.login-box p{color:var(--muted);font-size:13px;margin-bottom:40px;}
-input{width:100%;background:rgba(247,245,240,0.06);border:1px solid var(--line);color:var(--paper);padding:14px 16px;font-size:14px;font-family:'Inter',sans-serif;font-weight:300;border-radius:4px;margin-bottom:12px;outline:none;transition:border 0.2s;}
-input:focus{border-color:var(--gold);}
-button{width:100%;background:var(--gold);color:var(--ink);border:none;padding:14px;font-size:13px;font-family:'Inter',sans-serif;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;cursor:pointer;border-radius:4px;transition:opacity 0.2s;}
-button:hover{opacity:0.85;}
-.err{color:var(--red);font-size:13px;margin-top:8px;}
-#app{display:none;}
-header{display:flex;align-items:center;justify-content:space-between;padding:20px 40px;border-bottom:1px solid var(--line);}
-.logo{font-size:14px;letter-spacing:0.12em;font-weight:400;}
-.logo span{color:var(--gold);}
-.logout-btn{background:none;border:1px solid var(--line);color:var(--muted);padding:8px 20px;font-size:12px;letter-spacing:0.08em;text-transform:uppercase;width:auto;border-radius:4px;}
-.tabs{display:flex;gap:0;border-bottom:1px solid var(--line);padding:0 40px;}
-.tab{padding:16px 24px;font-size:12px;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;transition:all 0.2s;}
-.tab.active{color:var(--gold);border-bottom-color:var(--gold);}
-.panel{display:none;padding:40px;}
-.panel.active{display:block;}
-.section-title{font-family:'Newsreader',serif;font-size:22px;font-weight:300;margin-bottom:24px;}
-.card{background:rgba(247,245,240,0.04);border:1px solid var(--line);border-radius:6px;padding:24px;margin-bottom:16px;}
-.row{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px;}
-.row input{flex:1;min-width:140px;margin-bottom:0;}
-.btn-sm{width:auto;padding:10px 20px;font-size:12px;}
-.btn-ghost{background:none;border:1px solid var(--line);color:var(--muted);}
-.btn-danger{background:var(--red);}
-table{width:100%;border-collapse:collapse;font-size:13px;}
-th{text-align:left;padding:10px 14px;color:var(--muted);font-weight:400;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;border-bottom:1px solid var(--line);}
-td{padding:12px 14px;border-bottom:1px solid rgba(247,245,240,0.06);vertical-align:middle;}
-tr:last-child td{border-bottom:none;}
-tr:hover td{background:rgba(247,245,240,0.03);}
-.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;letter-spacing:0.05em;}
-.badge-admin{background:rgba(176,141,62,0.2);color:var(--gold);}
-.badge-investor{background:rgba(247,245,240,0.08);color:var(--muted);}
-.camp-list{max-height:420px;overflow-y:auto;border:1px solid var(--line);border-radius:6px;}
-.camp-item{display:flex;align-items:center;gap:16px;padding:12px 16px;border-bottom:1px solid var(--line);cursor:pointer;transition:background 0.15s;}
-.camp-item:last-child{border-bottom:none;}
-.camp-item:hover{background:rgba(247,245,240,0.04);}
-.camp-item input[type=checkbox]{accent-color:var(--gold);width:16px;height:16px;cursor:pointer;}
-.camp-name{flex:1;font-size:13px;}
-.camp-acc{font-size:11px;color:var(--muted);}
-.camp-stat{font-size:12px;color:var(--gold);}
-.profit-input{background:rgba(247,245,240,0.06);border:1px solid var(--line);color:var(--paper);padding:8px 10px;font-size:13px;font-family:'Inter',sans-serif;border-radius:4px;width:110px;}
-.profit-input:focus{border-color:var(--gold);outline:none;}
-.profit-notes{width:180px;}
-.save-btn{background:var(--gold);color:var(--ink);border:none;padding:8px 16px;font-size:12px;font-family:'Inter',sans-serif;font-weight:500;border-radius:4px;cursor:pointer;width:auto;}
-.save-btn:hover{opacity:0.85;}
-select{background:rgba(247,245,240,0.06);border:1px solid var(--line);color:var(--paper);padding:10px 14px;font-size:13px;font-family:'Inter',sans-serif;border-radius:4px;outline:none;cursor:pointer;}
-select:focus{border-color:var(--gold);}
-.notice{color:var(--muted);font-size:13px;padding:20px;text-align:center;}
-.preset-bar{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;}
-.preset-btn{background:none;border:1px solid var(--line);color:var(--muted);padding:8px 16px;font-size:12px;letter-spacing:0.06em;width:auto;border-radius:4px;}
+
+/* ── Login ── */
+#login-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px;}
+.login-card{width:100%;max-width:360px;text-align:center;}
+.brand{font-family:'Newsreader',serif;font-size:38px;font-weight:300;letter-spacing:0.04em;margin-bottom:4px;}
+.brand-sub{font-size:11px;letter-spacing:0.22em;text-transform:uppercase;color:var(--muted);margin-bottom:52px;}
+input,select,textarea{width:100%;background:rgba(247,245,240,0.05);border:1px solid var(--line);color:var(--paper);padding:11px 14px;font-size:13px;font-family:'Inter',sans-serif;font-weight:300;border-radius:4px;outline:none;transition:border 0.2s;}
+input:focus,select:focus,textarea:focus{border-color:var(--gold);}
+select option{background:#1a1a1a;}
+textarea{resize:vertical;min-height:72px;}
+.btn-primary{background:var(--gold);color:var(--ink);border:none;padding:11px 22px;font-size:11px;font-family:'Inter',sans-serif;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;cursor:pointer;border-radius:4px;transition:opacity 0.2s;}
+.btn-primary:hover{opacity:0.85;}
+.btn-primary.full{width:100%;padding:14px;margin-top:6px;}
+.btn-ghost{background:none;border:1px solid var(--line);color:var(--muted);padding:9px 18px;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;cursor:pointer;border-radius:4px;font-family:'Inter',sans-serif;transition:all 0.2s;}
+.btn-ghost:hover{border-color:rgba(247,245,240,0.3);color:var(--paper);}
+.btn-danger{background:none;border:1px solid rgba(224,85,85,0.3);color:var(--red);padding:6px 14px;font-size:10px;letter-spacing:0.08em;text-transform:uppercase;cursor:pointer;border-radius:4px;font-family:'Inter',sans-serif;transition:all 0.2s;}
+.btn-danger:hover{background:rgba(224,85,85,0.1);}
+.btn-claude{background:linear-gradient(135deg,#7c3aed,#5b8dee);color:white;border:none;padding:10px 20px;font-size:11px;font-family:'Inter',sans-serif;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;cursor:pointer;border-radius:4px;display:flex;align-items:center;gap:8px;transition:opacity 0.2s;}
+.btn-claude:hover{opacity:0.9;}
+.err{color:var(--red);font-size:12px;margin-top:10px;min-height:18px;}
+
+/* ── App shell ── */
+#app{display:none;min-height:100vh;}
+header{display:flex;align-items:center;justify-content:space-between;padding:18px 48px;border-bottom:1px solid var(--line);gap:16px;flex-wrap:wrap;}
+.logo{font-size:13px;letter-spacing:0.14em;font-weight:500;white-space:nowrap;}
+.logo-accent{color:var(--gold);}
+.logo-tag{font-size:10px;letter-spacing:0.1em;color:var(--muted);margin-left:8px;background:rgba(176,141,62,0.15);padding:2px 8px;border-radius:10px;vertical-align:middle;}
+.header-right{display:flex;align-items:center;gap:12px;}
+
+/* ── Tabs ── */
+.tabs{display:flex;gap:0;border-bottom:1px solid var(--line);padding:0 48px;overflow-x:auto;}
+.tab-btn{background:none;border:none;color:var(--muted);padding:16px 20px;font-size:12px;letter-spacing:0.08em;text-transform:uppercase;cursor:pointer;font-family:'Inter',sans-serif;border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap;transition:color 0.2s;}
+.tab-btn.active{color:var(--gold);border-bottom-color:var(--gold);}
+.tab-btn:hover:not(.active){color:var(--paper);}
+.tab-panel{display:none;padding:32px 48px 60px;}
+.tab-panel.active{display:block;}
+
+/* ── Preset bar ── */
+.preset-bar{display:flex;gap:8px;margin-bottom:28px;flex-wrap:wrap;align-items:center;}
+.preset-btn{background:none;border:1px solid var(--line);color:var(--muted);padding:7px 14px;font-size:11px;letter-spacing:0.06em;border-radius:4px;cursor:pointer;font-family:'Inter',sans-serif;transition:all 0.2s;}
 .preset-btn.active{border-color:var(--gold);color:var(--gold);}
-.metric-cards{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px;}
-.metric-card{background:rgba(247,245,240,0.04);border:1px solid var(--line);border-radius:6px;padding:16px 20px;flex:1;min-width:110px;}
-.metric-card .mval{font-family:'Newsreader',serif;font-size:26px;color:var(--gold);font-weight:300;}
-.metric-card .mlbl{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-top:4px;}
-.signal{display:inline-block;padding:2px 8px;border-radius:3px;font-size:12px;font-weight:500;}
-.sig-green{background:rgba(76,175,130,0.2);color:var(--green);}
-.sig-yellow{background:rgba(176,141,62,0.15);color:var(--gold);}
-.sig-red{background:rgba(224,85,85,0.2);color:var(--red);}
-#analytics-chart{background:rgba(247,245,240,0.02);border:1px solid var(--line);border-radius:6px;padding:12px;margin-bottom:24px;}
-.toast{position:fixed;bottom:24px;right:24px;background:var(--gold);color:var(--ink);padding:12px 24px;border-radius:4px;font-size:13px;font-weight:500;display:none;z-index:999;}
+.refresh-btn{background:none;border:1px solid var(--line);color:var(--muted);padding:7px 12px;font-size:12px;border-radius:4px;cursor:pointer;font-family:'Inter',sans-serif;margin-left:auto;transition:all 0.2s;}
+.refresh-btn:hover{color:var(--paper);}
+
+/* ── KPI Summary row ── */
+.kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:32px;}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:18px 20px;}
+.kpi.hi{border-color:rgba(176,141,62,0.25);background:rgba(176,141,62,0.04);}
+.kpi.hi2{border-color:rgba(76,175,130,0.25);background:rgba(76,175,130,0.04);}
+.kpi-label{font-size:9px;letter-spacing:0.16em;text-transform:uppercase;color:var(--muted);margin-bottom:8px;}
+.kpi-value{font-family:'Newsreader',serif;font-size:26px;font-weight:300;line-height:1;}
+.kpi-value.gold{color:var(--gold);}
+.kpi-value.green{color:var(--green);}
+
+/* ── Tables ── */
+.table-wrap{overflow-x:auto;margin-bottom:32px;}
+table{width:100%;border-collapse:collapse;font-size:12.5px;min-width:700px;}
+th{text-align:left;padding:9px 14px;color:var(--muted);font-weight:400;font-size:10px;letter-spacing:0.12em;text-transform:uppercase;border-bottom:1px solid var(--line);}
+th.r{text-align:right;}
+td{padding:12px 14px;border-bottom:1px solid rgba(247,245,240,0.04);vertical-align:middle;}
+td.r{text-align:right;}
+tr:hover td{background:rgba(247,245,240,0.02);}
+.total-row td{background:rgba(176,141,62,0.05);border-top:1px solid var(--line);color:var(--gold);font-weight:500;}
+.camp-name{font-size:12.5px;line-height:1.4;}
+.camp-acc{font-size:10px;color:var(--muted);margin-top:2px;}
+.badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:10px;}
+.bg{background:rgba(76,175,130,0.12);color:var(--green);}
+.by{background:rgba(224,183,85,0.12);color:var(--yellow);}
+.br{background:rgba(224,85,85,0.12);color:var(--red);}
+.green-val{color:var(--green);}
+.gold-val{color:var(--gold);}
+.red-val{color:var(--red);}
+.empty,.loading{text-align:center;padding:48px;color:var(--muted);font-size:13px;}
+.loading{font-style:italic;}
+
+/* ── Section headers ── */
+.section-title{font-family:'Newsreader',serif;font-size:22px;font-weight:300;font-style:italic;margin-bottom:20px;}
+.section-subtitle{font-size:12px;color:var(--muted);margin-top:-14px;margin-bottom:20px;}
+.row-gap{display:flex;gap:16px;margin-bottom:12px;flex-wrap:wrap;}
+.row-gap>*{flex:1;min-width:160px;}
+.label{font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;}
+
+/* ── Investor cards ── */
+.investor-list{display:grid;gap:12px;margin-top:20px;}
+.investor-card{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:16px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+.inv-name{font-size:14px;font-weight:400;}
+.inv-email{font-size:11px;color:var(--muted);margin-top:2px;}
+.inv-actions{display:flex;gap:8px;align-items:center;}
+
+/* ── Assign UI ── */
+.assign-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:16px;}
+.assign-col{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:16px;}
+.assign-col-title{font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-bottom:12px;}
+.assign-item{display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid rgba(247,245,240,0.04);font-size:12px;gap:8px;}
+.assign-item:last-child{border-bottom:none;}
+.assign-item-name{flex:1;line-height:1.3;}
+.assign-item-acc{font-size:10px;color:var(--muted);}
+.assign-check{width:16px;height:16px;cursor:pointer;accent-color:var(--gold);}
+
+/* ── Profit form ── */
+.profit-table-wrap .profit-row-form{display:none;padding:16px;background:rgba(176,141,62,0.04);border:1px solid rgba(176,141,62,0.15);border-radius:4px;margin:6px 0;}
+.profit-row-form.open{display:block;}
+.form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:12px;}
+.form-grid label{display:flex;flex-direction:column;gap:5px;font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);}
+.form-grid input{padding:8px 10px;font-size:13px;}
+
+/* ── Toast ── */
+.toast{position:fixed;bottom:32px;right:32px;background:#1a1a1a;border:1px solid var(--line);color:var(--paper);padding:14px 20px;border-radius:6px;font-size:13px;z-index:1000;opacity:0;transform:translateY(10px);transition:all 0.3s;max-width:320px;pointer-events:none;}
+.toast.show{opacity:1;transform:translateY(0);}
+.toast.toast-ok{border-color:rgba(76,175,130,0.4);background:rgba(76,175,130,0.08);}
+.toast.toast-err{border-color:rgba(224,85,85,0.4);}
+
+/* ── Claude modal ── */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:500;align-items:center;justify-content:center;padding:20px;}
+.modal-overlay.show{display:flex;}
+.modal{background:#111;border:1px solid var(--line);border-radius:8px;padding:28px;width:100%;max-width:640px;max-height:80vh;overflow-y:auto;}
+.modal-title{font-family:'Newsreader',serif;font-size:20px;font-weight:300;margin-bottom:8px;}
+.modal-sub{font-size:12px;color:var(--muted);margin-bottom:20px;}
+.modal-body{background:#0d0d0d;border:1px solid var(--line);border-radius:4px;padding:16px;font-size:11px;line-height:1.7;color:rgba(247,245,240,0.7);font-family:monospace;white-space:pre-wrap;max-height:300px;overflow-y:auto;margin-bottom:20px;}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;}
+
+@media(max-width:768px){
+  header,.tabs,.tab-panel{padding-left:16px;padding-right:16px;}
+  .assign-grid{grid-template-columns:1fr;}
+  .kpi-value{font-size:22px;}
+}
 </style>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 </head>
 <body>
+
+<!-- Login -->
 <div id="login-screen">
-  <div class="login-box">
-    <h1>JPROP <span class="serif">Admin</span></h1>
-    <p>Investor Dashboard Management</p>
-    <input id="l-email" type="email" placeholder="Admin email" />
-    <input id="l-pw" type="password" placeholder="Password" />
-    <button onclick="doLogin()">Sign In</button>
+  <div class="login-card">
+    <div class="brand">JPROP</div>
+    <div class="brand-sub">Admin Portal</div>
+    <input id="l-email" type="email" placeholder="Admin email" autocomplete="email" />
+    <input id="l-pw" type="password" placeholder="Password" autocomplete="current-password"
+           onkeydown="if(event.key==='Enter')doLogin()" />
+    <button class="btn-primary full" onclick="doLogin()">Sign In</button>
     <div id="l-err" class="err"></div>
   </div>
 </div>
+
+<!-- App -->
 <div id="app">
   <header>
-    <div class="logo">JP<span>R</span>OP <span style="color:var(--muted);font-weight:300;font-size:12px;margin-left:8px;">Admin Panel</span></div>
-    <button class="logout-btn" onclick="logout()">Sign Out</button>
+    <div class="logo">JP<span class="logo-accent">R</span>OP <span class="logo-tag">Admin</span></div>
+    <div class="header-right">
+      <button class="btn-claude" onclick="openClaudeAnalysis()">
+        ✦ Analyze with Claude
+      </button>
+      <button class="btn-ghost" onclick="logout()">Sign Out</button>
+    </div>
   </header>
+
+  <!-- Tabs -->
   <div class="tabs">
-    <div class="tab active" onclick="switchTab('investors')">Investors</div>
-    <div class="tab" onclick="switchTab('assign')">Assign Campaigns</div>
-    <div class="tab" onclick="switchTab('profit')">Profit Entry</div>
-    <div class="tab" onclick="switchTab('analytics')">Analytics</div>
+    <button class="tab-btn active" onclick="switchTab('overview',this)">Overview</button>
+    <button class="tab-btn" onclick="switchTab('profit',this)">Profit Entry</button>
+    <button class="tab-btn" onclick="switchTab('investors',this)">Investors</button>
+    <button class="tab-btn" onclick="switchTab('assign',this)">Assignments</button>
   </div>
-  <div id="tab-investors" class="panel active">
-    <div style="display:flex;gap:40px;flex-wrap:wrap;">
-      <div style="flex:1;min-width:280px;">
-        <div class="section-title">Add Investor</div>
-        <div class="card">
-          <input id="i-name" placeholder="Full name" style="margin-bottom:12px;" />
-          <input id="i-email" type="email" placeholder="Email address" style="margin-bottom:12px;" />
-          <input id="i-pw" type="password" placeholder="Password" style="margin-bottom:16px;" />
-          <button class="btn-sm" onclick="createInvestor()">Create Account</button>
-        </div>
-      </div>
-      <div style="flex:2;min-width:360px;">
-        <div class="section-title">All Accounts</div>
-        <table id="investor-table">
-          <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Created</th><th></th></tr></thead>
-          <tbody id="investor-tbody"></tbody>
-        </table>
-      </div>
+
+  <!-- ═══ OVERVIEW TAB ═══ -->
+  <div id="tab-overview" class="tab-panel active">
+    <div class="preset-bar">
+      <button class="preset-btn active" onclick="setPreset('last_week_sun_sat',this)">Last Week</button>
+      <button class="preset-btn" onclick="setPreset('this_week_sun_today',this)">This Week</button>
+      <button class="preset-btn" onclick="setPreset('this_month',this)">This Month</button>
+      <button class="preset-btn" onclick="setPreset('last_month',this)">Last Month</button>
+      <button class="refresh-btn" onclick="loadOverview()">↻ Refresh</button>
+    </div>
+
+    <div class="kpi-row" id="ov-kpis">
+      <div class="kpi hi"><div class="kpi-label">Total Spend</div><div class="kpi-value gold" id="ov-spend">…</div></div>
+      <div class="kpi"><div class="kpi-label">Total Leads</div><div class="kpi-value" id="ov-leads">…</div></div>
+      <div class="kpi"><div class="kpi-label">Avg CPL</div><div class="kpi-value" id="ov-cpl">…</div></div>
+      <div class="kpi"><div class="kpi-label">Closings</div><div class="kpi-value gold" id="ov-closing">…</div></div>
+      <div class="kpi hi2"><div class="kpi-label">Commission</div><div class="kpi-value green" id="ov-commission">…</div></div>
+      <div class="kpi hi2"><div class="kpi-label">ROI</div><div class="kpi-value green" id="ov-roi">…</div></div>
+    </div>
+
+    <div class="section-title">All Campaigns</div>
+    <div class="table-wrap">
+      <table id="ov-table">
+        <thead>
+          <tr>
+            <th>Campaign</th>
+            <th>Account</th>
+            <th class="r">Spend</th>
+            <th class="r">Leads</th>
+            <th class="r">CPL</th>
+            <th class="r">CPM</th>
+            <th class="r">CTR</th>
+            <th class="r">Closings</th>
+            <th class="r">Commission</th>
+            <th class="r">ROI</th>
+          </tr>
+        </thead>
+        <tbody id="ov-tbody">
+          <tr><td colspan="10" class="loading">Loading campaigns…</td></tr>
+        </tbody>
+      </table>
     </div>
   </div>
-  <div id="tab-assign" class="panel">
-    <div class="section-title">Assign Campaigns to Investor</div>
-    <div style="display:flex;gap:16px;align-items:center;margin-bottom:20px;flex-wrap:wrap;">
-      <select id="assign-investor" onchange="loadAssign()" style="min-width:200px;">
-        <option value="">— Select investor —</option>
-      </select>
-      <div class="preset-bar" style="margin:0;">
-        <button class="preset-btn active" onclick="setPreset('last_week_sun_sat',this)">Last Week</button>
-        <button class="preset-btn" onclick="setPreset('this_week_sun_today',this)">This Week</button>
-        <button class="preset-btn" onclick="setPreset('this_month',this)">This Month</button>
-        <button class="preset-btn" onclick="setPreset('last_month',this)">Last Month</button>
-      </div>
+
+  <!-- ═══ PROFIT ENTRY TAB ═══ -->
+  <div id="tab-profit" class="tab-panel">
+    <div class="section-title">Profit Entry</div>
+    <div class="section-subtitle">Enter closing sales, nett sales and commission per campaign. Data is shown to investors.</div>
+
+    <div class="preset-bar" style="margin-bottom:20px;">
+      <button class="preset-btn active" onclick="setProfitPreset('last_week_sun_sat',this)">Last Week</button>
+      <button class="preset-btn" onclick="setProfitPreset('this_week_sun_today',this)">This Week</button>
+      <button class="preset-btn" onclick="setProfitPreset('this_month',this)">This Month</button>
+      <button class="preset-btn" onclick="setProfitPreset('last_month',this)">Last Month</button>
+      <button class="refresh-btn" onclick="loadProfitTab()">↻ Refresh</button>
     </div>
-    <div id="assign-area" class="notice">Select an investor to see campaigns</div>
-  </div>
-  <div id="tab-profit" class="panel">
-    <div class="section-title">Campaign Profit &amp; Revenue</div>
-    <p style="color:var(--muted);font-size:13px;margin-bottom:20px;">Key in revenue, cost, and profit for each campaign. Investors will see these figures in their dashboard.</p>
-    <div style="overflow-x:auto;">
+
+    <div class="table-wrap profit-table-wrap">
       <table>
         <thead>
           <tr>
-            <th>Campaign</th><th>Account</th>
-            <th>Closing Sales</th><th>Nett Sales (RM)</th>
-            <th>Commission (RM)</th><th>ROI</th><th>Notes</th><th></th>
+            <th>Campaign</th>
+            <th class="r">Spend</th>
+            <th class="r">Leads</th>
+            <th class="r">Closings</th>
+            <th class="r">Nett Sales</th>
+            <th class="r">Commission</th>
+            <th class="r">ROI</th>
+            <th></th>
           </tr>
         </thead>
-        <tbody id="profit-tbody"></tbody>
+        <tbody id="profit-tbody">
+          <tr><td colspan="8" class="loading">Loading…</td></tr>
+        </tbody>
       </table>
     </div>
-    <div id="profit-notice" class="notice">Loading campaigns…</div>
+  </div>
+
+  <!-- ═══ INVESTORS TAB ═══ -->
+  <div id="tab-investors" class="tab-panel">
+    <div class="section-title">Investor Accounts</div>
+
+    <!-- Create investor form -->
+    <div style="background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:20px;margin-bottom:28px;max-width:480px;">
+      <div class="label" style="margin-bottom:14px;">Create New Investor</div>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <input id="inv-name" placeholder="Full name" />
+        <input id="inv-email" type="email" placeholder="Email address" />
+        <input id="inv-pw" type="password" placeholder="Password" />
+        <button class="btn-primary" style="align-self:flex-start;" onclick="createInvestor()">Create Account</button>
+      </div>
+    </div>
+
+    <div class="section-title" style="font-size:16px;">Existing Investors</div>
+    <div id="investor-list" class="investor-list">
+      <div class="loading">Loading investors…</div>
+    </div>
+  </div>
+
+  <!-- ═══ ASSIGNMENTS TAB ═══ -->
+  <div id="tab-assign" class="tab-panel">
+    <div class="section-title">Campaign Assignments</div>
+    <div class="section-subtitle">Select an investor, then tick/untick campaigns to assign them.</div>
+
+    <div style="max-width:300px;margin-bottom:24px;">
+      <div class="label" style="margin-bottom:6px;">Select Investor</div>
+      <select id="assign-investor-select" onchange="loadAssignments()">
+        <option value="">— Choose investor —</option>
+      </select>
+    </div>
+
+    <div id="assign-area" style="display:none;">
+      <div class="assign-grid">
+        <div class="assign-col">
+          <div class="assign-col-title">Available Campaigns</div>
+          <div id="avail-campaigns"><div class="loading">Loading…</div></div>
+        </div>
+        <div class="assign-col">
+          <div class="assign-col-title">Assigned Campaigns</div>
+          <div id="assigned-campaigns"><div style="color:var(--muted);font-size:12px;padding:8px 0;">None assigned yet.</div></div>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 
-  <div id="tab-analytics" class="panel">
-    <div class="section-title">Ad Account Analytics</div>
-    <div style="display:flex;gap:16px;align-items:center;margin-bottom:20px;flex-wrap:wrap;">
-      <select id="analytics-account" onchange="loadAnalytics()" style="min-width:220px;">
-        <option value="">&#8212; Select account &#8212;</option>
-      </select>
-      <div class="preset-bar" style="margin:0;" id="analytics-presets">
-        <button class="preset-btn active" onclick="setAnalyticsPreset('last_week_sun_sat',this)">Last Week</button>
-        <button class="preset-btn" onclick="setAnalyticsPreset('this_week_sun_today',this)">This Week</button>
-        <button class="preset-btn" onclick="setAnalyticsPreset('this_month',this)">This Month</button>
-        <button class="preset-btn" onclick="setAnalyticsPreset('last_month',this)">Last Month</button>
-      </div>
+<!-- ── Claude Modal ── -->
+<div class="modal-overlay" id="claude-modal">
+  <div class="modal">
+    <div class="modal-title">Analyze with Claude</div>
+    <div class="modal-sub">Campaign data has been formatted and copied to your clipboard. Open Claude and paste to get a full analysis.</div>
+    <div class="modal-body" id="claude-prompt-preview"></div>
+    <div class="modal-actions">
+      <button class="btn-ghost" onclick="closeClaudeModal()">Close</button>
+      <button class="btn-ghost" onclick="copyClaudePrompt()">📋 Copy Again</button>
+      <button class="btn-claude" onclick="window.open('https://claude.ai/new','_blank')">Open Claude ↗</button>
     </div>
-    <div id="analytics-summary" style="display:none;">
-      <div class="metric-cards" id="analytics-cards"></div>
-      <canvas id="analytics-chart" style="max-height:240px;"></canvas>
-      <div style="overflow-x:auto;margin-top:16px;">
-        <table>
-          <thead><tr>
-            <th>Campaign</th><th>Status</th><th>Budget/day</th>
-            <th>Spend</th><th>Leads</th><th>CPL</th><th>CPM</th>
-            <th>Hook%</th><th>Thru%</th><th>CTR%</th>
-          </tr></thead>
-          <tbody id="analytics-tbody"></tbody>
-        </table>
-      </div>
-    </div>
-    <div id="analytics-notice" class="notice">Select an account to view analytics</div>
   </div>
-<div id="toast" class="toast"></div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
 <script>
 const API = '';
-let TOKEN = localStorage.getItem('jprop_admin_token') || '';
+let TOKEN = localStorage.getItem('jprop_token') || '';
 let currentPreset = 'last_week_sun_sat';
-let allCampaigns = [];
-let currentAssignments = new Set();
-function api(path, opts={}) {
-  return fetch(API + path, {
-    headers: { 'Authorization': `Bearer ${TOKEN}`, 'Content-Type': 'application/json', ...opts.headers },
+let profitPreset  = 'last_week_sun_sat';
+let allCampaigns  = [];
+let allProfits    = {};
+let claudePromptText = '';
+
+// ── Helpers ──────────────────────────────────────────────
+
+function rm(v) {
+  return 'RM ' + Number(v).toLocaleString('en-MY', {minimumFractionDigits: 0, maximumFractionDigits: 0});
+}
+function cplBadge(v) {
+  if (!v) return '<span style="color:var(--muted)">—</span>';
+  const cls = v <= 50 ? 'bg' : v <= 100 ? 'by' : 'br';
+  return '<span class="badge ' + cls + '">RM ' + v + '</span>';
+}
+function roiBadge(v) {
+  if (!v) return '<span style="color:var(--muted)">—</span>';
+  const cls = v >= 2 ? 'bg' : v >= 1 ? 'by' : 'br';
+  return '<span class="badge ' + cls + '">' + v + 'x</span>';
+}
+function showToast(msg, type='ok') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast toast-' + type + ' show';
+  setTimeout(() => t.classList.remove('show'), 3200);
+}
+
+async function apiFetch(path, opts={}) {
+  const r = await fetch(API + path, {
     ...opts,
-  }).then(r => {
-    if (r.status === 401) { logout(); throw new Error('Unauthorized'); }
-    return r.json();
+    headers: {'Authorization': 'Bearer ' + TOKEN, 'Content-Type': 'application/json', ...(opts.headers||{})}
   });
+  if (r.status === 401) { logout(); throw new Error('Auth'); }
+  if (!r.ok) {
+    const d = await r.json().catch(() => ({}));
+    throw new Error(d.detail || 'Request failed');
+  }
+  return r.json();
 }
-function toast(msg, ok=true) {
-  const el = document.getElementById('toast');
-  el.textContent = msg;
-  el.style.background = ok ? 'var(--gold)' : 'var(--red)';
-  el.style.display = 'block';
-  setTimeout(() => el.style.display='none', 2500);
-}
+
+// ── Auth ──────────────────────────────────────────────────
+
 async function doLogin() {
-  const email = document.getElementById('l-email').value;
-  const pw    = document.getElementById('l-pw').value;
-  const res   = await fetch(API+'/api/login', {
-    method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({email, password:pw})
-  });
-  const data = await res.json();
-  if (!res.ok) { document.getElementById('l-err').textContent = data.detail; return; }
-  if (data.role !== 'admin') { document.getElementById('l-err').textContent = 'Admin access only.'; return; }
-  TOKEN = data.token;
-  localStorage.setItem('jprop_admin_token', TOKEN);
-  showApp();
+  const email = document.getElementById('l-email').value.trim();
+  const pw = document.getElementById('l-pw').value;
+  document.getElementById('l-err').textContent = '';
+  try {
+    const r = await fetch(API + '/api/login', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({email, password: pw})
+    });
+    const d = await r.json();
+    if (!r.ok) { document.getElementById('l-err').textContent = d.detail || 'Login failed'; return; }
+    if (d.role !== 'admin') {
+      document.getElementById('l-err').textContent = 'Admin access required. Redirecting…';
+      setTimeout(() => window.location.href = '/', 1500);
+      return;
+    }
+    TOKEN = d.token;
+    localStorage.setItem('jprop_token', TOKEN);
+    localStorage.setItem('jprop_role', d.role);
+    showApp();
+  } catch(e) {
+    document.getElementById('l-err').textContent = 'Connection error. Please try again.';
+  }
 }
+
 function logout() {
-  localStorage.removeItem('jprop_admin_token');
+  localStorage.removeItem('jprop_token');
+  localStorage.removeItem('jprop_role');
   TOKEN = '';
   document.getElementById('app').style.display = 'none';
   document.getElementById('login-screen').style.display = 'flex';
 }
+
 function showApp() {
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('app').style.display = 'block';
-  loadInvestors();
-  loadAllCampaigns();
-  initAnalyticsAccounts();
-}
-if (TOKEN) showApp();
-function switchTab(name) {
-  document.querySelectorAll('.tab').forEach((t,i) => {
-    const names = ['investors','assign','profit','analytics'];
-    t.classList.toggle('active', names[i]===name);
-  });
-  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
-  document.getElementById('tab-'+name).classList.add('active');
-}
-async function loadInvestors() {
-  const data = await api('/api/admin/investors');
-  const tbody = document.getElementById('investor-tbody');
-  const sel   = document.getElementById('assign-investor');
-  tbody.innerHTML = '';
-  sel.innerHTML   = '<option value="">— Select investor —</option>';
-  data.forEach(u => {
-    tbody.innerHTML += `<tr><td>${u.name}</td><td style="color:var(--muted)">${u.email}</td><td><span class="badge badge-${u.role}">${u.role}</span></td><td style="color:var(--muted);font-size:12px">${u.created_at.slice(0,10)}</td><td>${u.role!=='admin'?`<button class="btn-sm btn-danger" onclick="delInvestor(${u.id},'${u.name}')">Remove</button>`:''}</td></tr>`;
-    if (u.role === 'investor') sel.innerHTML += `<option value="${u.id}">${u.name} (${u.email})</option>`;
-  });
-}
-async function createInvestor() {
-  const name  = document.getElementById('i-name').value.trim();
-  const email = document.getElementById('i-email').value.trim();
-  const pw    = document.getElementById('i-pw').value;
-  if (!name||!email||!pw) { toast('Fill all fields',false); return; }
-  await api('/api/admin/investors', { method:'POST', body: JSON.stringify({name,email,password:pw}) });
-  document.getElementById('i-name').value = '';
-  document.getElementById('i-email').value = '';
-  document.getElementById('i-pw').value = '';
-  toast('✅ '+name+' created');
+  loadOverview();
   loadInvestors();
 }
-async function delInvestor(id, name) {
-  if (!confirm('Remove '+name+'?')) return;
-  await api('/api/admin/investors/'+id, {method:'DELETE'});
-  toast('Removed '+name);
-  loadInvestors();
+
+if (TOKEN && localStorage.getItem('jprop_role') === 'admin') {
+  showApp();
+} else if (TOKEN) {
+  window.location.href = '/';
 }
-async function loadAllCampaigns() {
-  document.getElementById('profit-notice').textContent = 'Loading campaigns…';
-  allCampaigns = await api('/api/admin/campaigns?preset='+currentPreset);
-  renderProfitTable();
-}
-function setPreset(preset, btn) {
-  currentPreset = preset;
-  document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+
+// ── Tabs ──────────────────────────────────────────────────
+
+function switchTab(name, btn) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
   btn.classList.add('active');
-  loadAllCampaigns();
-  const uid = document.getElementById('assign-investor').value;
-  if (uid) loadAssign();
+  if (name === 'profit')    loadProfitTab();
+  if (name === 'investors') loadInvestors();
+  if (name === 'assign')    loadAssignTab();
 }
-async function loadAssign() {
-  const uid = document.getElementById('assign-investor').value;
-  if (!uid) { document.getElementById('assign-area').innerHTML = '<div class="notice">Select an investor</div>'; return; }
-  const [campaigns, existing] = await Promise.all([
-    api('/api/admin/campaigns?preset='+currentPreset),
-    api('/api/admin/assignments/'+uid)
-  ]);
-  currentAssignments = new Set(existing.map(a => a.campaign_id));
-  const html = campaigns.map(c => '<div class="camp-item" onclick="toggleAssign(this,\''+uid+'\','+c.account_idx+',\''+c.campaign_id+'\',\''+c.campaign_name.replace(/\'/g,"\\'")+'\')">'+'<input type="checkbox" '+(currentAssignments.has(c.campaign_id)?'checked':'')+' onclick="event.stopPropagation();toggleAssign(this.closest(\"camp-item\"),\''+uid+'\','+c.account_idx+',\''+c.campaign_id+'\',\''+c.campaign_name.replace(/\'/g,"\\'")+'\')">'+'<div class="camp-name">'+c.campaign_name+'<br><span class="camp-acc">'+c.account_label+'</span></div><div class="camp-stat">RM'+c.spend+' · '+c.leads+' leads</div></div>').join('');
-  document.getElementById('assign-area').innerHTML = '<div class="camp-list">'+html+'</div>';
+
+// ── Overview ──────────────────────────────────────────────
+
+function setPreset(p, btn) {
+  currentPreset = p;
+  document.querySelectorAll('#tab-overview .preset-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  loadOverview();
 }
-async function toggleAssign(el, uid, accIdx, cid, cname) {
-  const cb = el.querySelector('input[type=checkbox]');
-  if (currentAssignments.has(cid)) {
-    await api('/api/admin/assign?user_id='+uid+'&campaign_id='+encodeURIComponent(cid), {method:'DELETE'});
-    currentAssignments.delete(cid); cb.checked = false; toast('Campaign unassigned');
-  } else {
-    await api('/api/admin/assign', {method:'POST', body: JSON.stringify({user_id:parseInt(uid),account_idx:accIdx,campaign_id:cid,campaign_name:cname})});
-    currentAssignments.add(cid); cb.checked = true; toast('Campaign assigned ✅');
+
+async function loadOverview() {
+  ['ov-spend','ov-leads','ov-cpl','ov-closing','ov-commission','ov-roi'].forEach(id =>
+    document.getElementById(id).textContent = '…'
+  );
+  document.getElementById('ov-tbody').innerHTML = '<tr><td colspan="10" class="loading">Fetching live data…</td></tr>';
+
+  try {
+    const [campaigns, profits] = await Promise.all([
+      apiFetch('/api/admin/campaigns?preset=' + currentPreset),
+      apiFetch('/api/admin/profits')
+    ]);
+    allCampaigns = campaigns;
+    allProfits = {};
+    profits.forEach(p => allProfits[p.campaign_id] = p);
+
+    // Enrich with profit data
+    const enriched = campaigns.map(c => {
+      const p = allProfits[c.campaign_id] || {};
+      const sp = c.spend || 0;
+      const comm = p.commission || 0;
+      return {
+        ...c,
+        closing_sales: p.closing_sales || 0,
+        nett_sales:    p.nett_sales || 0,
+        commission:    comm,
+        roi:           sp && comm ? Math.round((comm / sp) * 100) / 100 : 0,
+      };
+    });
+
+    // Totals
+    const totals = enriched.reduce((acc, c) => ({
+      spend:         acc.spend + c.spend,
+      leads:         acc.leads + c.leads,
+      closing_sales: acc.closing_sales + c.closing_sales,
+      nett_sales:    acc.nett_sales + c.nett_sales,
+      commission:    acc.commission + c.commission,
+    }), {spend:0, leads:0, closing_sales:0, nett_sales:0, commission:0});
+    totals.cpl = totals.leads ? Math.round(totals.spend / totals.leads * 100) / 100 : 0;
+    totals.roi = totals.spend && totals.commission ? Math.round(totals.commission / totals.spend * 100) / 100 : 0;
+
+    document.getElementById('ov-spend').textContent = rm(totals.spend);
+    document.getElementById('ov-leads').textContent = totals.leads;
+    document.getElementById('ov-cpl').textContent = totals.cpl ? 'RM ' + totals.cpl : '—';
+    document.getElementById('ov-closing').textContent = totals.closing_sales || '—';
+    document.getElementById('ov-commission').textContent = totals.commission ? rm(totals.commission) : '—';
+    document.getElementById('ov-roi').textContent = totals.roi ? totals.roi + 'x' : '—';
+
+    const rows = enriched.map(c => `
+      <tr>
+        <td><div class="camp-name">${escHtml(c.campaign_name)}</div></td>
+        <td style="color:var(--muted);font-size:11px;">${escHtml(c.account_label||'')}</td>
+        <td class="r gold-val">${rm(c.spend)}</td>
+        <td class="r">${c.leads || '—'}</td>
+        <td class="r">${cplBadge(c.cpl)}</td>
+        <td class="r" style="color:var(--muted);">${c.cpm ? 'RM '+c.cpm : '—'}</td>
+        <td class="r" style="color:var(--muted);">${c.ctr ? c.ctr+'%' : '—'}</td>
+        <td class="r">${c.closing_sales || '<span style="color:var(--muted)">—</span>'}</td>
+        <td class="r green-val">${c.commission ? rm(c.commission) : '<span style="color:var(--muted)">—</span>'}</td>
+        <td class="r">${roiBadge(c.roi)}</td>
+      </tr>
+    `).join('');
+
+    const totalRow = `
+      <tr class="total-row">
+        <td><b>TOTAL</b></td><td>—</td>
+        <td class="r"><b>${rm(totals.spend)}</b></td>
+        <td class="r"><b>${totals.leads}</b></td>
+        <td class="r">${totals.cpl ? 'RM '+totals.cpl : '—'}</td>
+        <td class="r">—</td><td class="r">—</td>
+        <td class="r"><b>${totals.closing_sales || '—'}</b></td>
+        <td class="r"><b>${totals.commission ? rm(totals.commission) : '—'}</b></td>
+        <td class="r"><b>${totals.roi ? totals.roi+'x' : '—'}</b></td>
+      </tr>`;
+
+    document.getElementById('ov-tbody').innerHTML = rows + totalRow || '<tr><td colspan="10" class="empty">No campaigns found</td></tr>';
+
+  } catch(e) {
+    document.getElementById('ov-tbody').innerHTML = '<tr><td colspan="10" class="empty">Failed to load — ' + e.message + '</td></tr>';
   }
 }
-async function renderProfitTable() {
-  const profits = await api('/api/admin/profits');
-  const profitMap = {};
-  profits.forEach(p => profitMap[p.campaign_id] = p);
-  const tbody = document.getElementById('profit-tbody');
-  document.getElementById('profit-notice').style.display = 'none';
-  tbody.innerHTML = allCampaigns.map(c => {
-    const p = profitMap[c.campaign_id] || {};
-    const roi = (p.commission && c.spend) ? (p.commission/c.spend).toFixed(2)+'x' : '—';
-    return '<tr><td><div style="font-size:13px;">'+c.campaign_name+'</div><div style="font-size:11px;color:var(--muted)">Spend: RM'+c.spend+' · '+c.leads+' leads</div></td><td style="color:var(--muted);font-size:12px;">'+c.account_label+'</td><td><input class="profit-input" id="cls-'+c.campaign_id+'" type="number" placeholder="0" value="'+(p.closing_sales||'')+'" style="width:80px;" /></td><td><input class="profit-input" id="nett-'+c.campaign_id+'" type="number" placeholder="0" value="'+(p.nett_sales||'')+'" /></td><td><input class="profit-input" id="comm-'+c.campaign_id+'" type="number" placeholder="0" value="'+(p.commission||'')+'" onchange="updateRoi(\''+c.campaign_id+'\','+c.spend+')" /></td><td id="roi-'+c.campaign_id+'" style="color:var(--green);font-weight:500;">'+roi+'</td><td><input class="profit-input profit-notes" id="note-'+c.campaign_id+'" type="text" placeholder="Optional" value="'+(p.notes||'')+'" /></td><td><button class="save-btn" onclick="saveProfit(\''+c.campaign_id+'\',\''+c.campaign_name.replace(/\'/g,"\\'")+'\')">Save</button></td></tr>';
-  }).join('');
-}
-function updateRoi(cid, spend) {
-  const comm = parseFloat(document.getElementById('comm-'+cid).value) || 0;
-  const roi = (comm && spend) ? (comm/spend).toFixed(2)+'x' : '—';
-  document.getElementById('roi-'+cid).textContent = roi;
-}
-async function saveProfit(cid, cname) {
-  const closing_sales = parseInt(document.getElementById('cls-'+cid).value) || 0;
-  const nett_sales    = parseFloat(document.getElementById('nett-'+cid).value) || 0;
-  const commission    = parseFloat(document.getElementById('comm-'+cid).value) || 0;
-  const notes         = document.getElementById('note-'+cid).value;
-  await api('/api/admin/profit', {method:'POST', body: JSON.stringify({campaign_id:cid,campaign_name:cname,closing_sales,nett_sales,commission,notes})});
-  toast('Saved ✅');
-}
 
-let analyticsPreset = 'last_week_sun_sat';
-let analyticsChart = null;
-async function initAnalyticsAccounts() {
-  const accounts = await api('/api/admin/accounts');
-  const sel = document.getElementById('analytics-account');
-  accounts.forEach(a => { const opt = document.createElement('option'); opt.value = a.idx; opt.textContent = a.emoji + ' ' + a.label; sel.appendChild(opt); });
-}
-function setAnalyticsPreset(preset, btn) {
-  analyticsPreset = preset;
-  document.querySelectorAll('#analytics-presets .preset-btn').forEach(b => b.classList.remove('active'));
+// ── Profit Entry ──────────────────────────────────────────
+
+function setProfitPreset(p, btn) {
+  profitPreset = p;
+  document.querySelectorAll('#tab-profit .preset-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
-  loadAnalytics();
-}
-async function loadAnalytics() {
-  const idx = document.getElementById('analytics-account').value;
-  if (idx === '') return;
-  const notice = document.getElementById('analytics-notice');
-  notice.textContent = 'Loading…'; notice.style.display = 'block';
-  document.getElementById('analytics-summary').style.display = 'none';
-  try {
-    const data = await api('/api/admin/account-report?account_idx='+idx+'&preset='+analyticsPreset);
-    if (data.error) { notice.textContent = '❌ ' + data.error.message; return; }
-    if (!data.campaigns || data.campaigns.length === 0) { notice.textContent = 'No campaigns for this period.'; return; }
-    notice.style.display = 'none';
-    document.getElementById('analytics-summary').style.display = 'block';
-    renderAnalytics(data);
-  } catch(e) { notice.textContent = '❌ Error: ' + e.message; }
-}
-function sig(val, type) {
-  let cls = 'sig-yellow';
-  if (type==='cpl') cls = val===0?'sig-yellow':(val<=50?'sig-green':val<=100?'sig-yellow':'sig-red');
-  else if (type==='hook') cls = val>=30?'sig-green':val>=15?'sig-yellow':'sig-red';
-  else if (type==='thru') cls = val>=10?'sig-green':val>=5?'sig-yellow':'sig-red';
-  else if (type==='ctr')  cls = val>=1.0?'sig-green':val>=0.5?'sig-yellow':'sig-red';
-  else if (type==='cpm')  cls = val<=80?'sig-green':val<=150?'sig-yellow':'sig-red';
-  return '<span class="signal '+cls+'">'+val+'</span>';
-}
-function renderAnalytics(data) {
-  const camps = data.campaigns;
-  const tSpend = camps.reduce((s,c)=>s+c.spend,0);
-  const tLeads = camps.reduce((s,c)=>s+c.leads,0);
-  const avgCPL = tLeads>0?(tSpend/tLeads).toFixed(2):0;
-  const avgCPM = camps.length>0?(camps.reduce((s,c)=>s+c.cpm,0)/camps.length).toFixed(2):0;
-  document.getElementById('analytics-cards').innerHTML =
-    '<div class="metric-card"><div class="mval">RM'+Math.round(tSpend)+'</div><div class="mlbl">Total Spend</div></div>'+
-    '<div class="metric-card"><div class="mval">'+tLeads+'</div><div class="mlbl">Total Leads</div></div>'+
-    '<div class="metric-card"><div class="mval">RM'+avgCPL+'</div><div class="mlbl">Avg CPL</div></div>'+
-    '<div class="metric-card"><div class="mval">RM'+avgCPM+'</div><div class="mlbl">Avg CPM</div></div>'+
-    '<div class="metric-card"><div class="mval">'+camps.length+'</div><div class="mlbl">Campaigns</div></div>';
-  if (analyticsChart) { analyticsChart.destroy(); analyticsChart = null; }
-  const ctx = document.getElementById('analytics-chart').getContext('2d');
-  analyticsChart = new Chart(ctx, {
-    data: { labels: camps.map(c=>c.campaign_name.slice(0,22)),
-      datasets: [
-        {type:'bar',label:'Spend (RM)',data:camps.map(c=>c.spend),backgroundColor:'rgba(176,141,62,0.35)',borderColor:'#b08d3e',borderWidth:1,yAxisID:'y'},
-        {type:'line',label:'CPL (RM)',data:camps.map(c=>c.cpl),borderColor:'#e05555',backgroundColor:'rgba(224,85,85,0.1)',pointBackgroundColor:'#e05555',tension:0.3,yAxisID:'y1'}
-      ]
-    },
-    options:{ responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
-      plugins:{legend:{labels:{color:'rgba(247,245,240,0.6)',font:{size:11}}}},
-      scales:{
-        x:{ticks:{color:'rgba(247,245,240,0.4)',font:{size:10},maxRotation:35},grid:{color:'rgba(247,245,240,0.05)'}},
-        y:{position:'left',ticks:{color:'rgba(247,245,240,0.4)',font:{size:10}},grid:{color:'rgba(247,245,240,0.05)'},title:{display:true,text:'Spend (RM)',color:'#b08d3e',font:{size:11}}},
-        y1:{position:'right',ticks:{color:'rgba(224,85,85,0.6)',font:{size:10}},grid:{drawOnChartArea:false},title:{display:true,text:'CPL (RM)',color:'#e05555',font:{size:11}}}
-      }
-    }
-  });
-  document.getElementById('analytics-tbody').innerHTML = camps.map(c => {
-    const icon = c.status==='ACTIVE'?'🟢':(c.status==='PAUSED'?'⏸️':'📌');
-    const bud = c.daily_budget>0?'RM'+Math.round(c.daily_budget):'&#8212;';
-    const ld = c.leads>0?c.leads:'<span style="color:var(--red)">0 ⚠️</span>';
-    const cplS = c.leads>0?sig(c.cpl,'cpl'):'&#8212;';
-    return '<tr><td style="font-size:12px;">'+c.campaign_name+'</td><td>'+icon+'</td><td style="color:var(--muted);font-size:12px;">'+bud+'</td><td><b>RM'+c.spend+'</b></td><td>'+ld+'</td><td>'+cplS+'</td><td>'+sig(c.cpm,'cpm')+'</td><td>'+sig(c.hook_pct,'hook')+'</td><td>'+sig(c.thru_pct,'thru')+'</td><td>'+sig(c.ctr,'ctr')+'</td></tr>';
-  }).join('');
+  loadProfitTab();
 }
 
+async function loadProfitTab() {
+  document.getElementById('profit-tbody').innerHTML = '<tr><td colspan="8" class="loading">Loading…</td></tr>';
+  try {
+    const [campaigns, profits] = await Promise.all([
+      apiFetch('/api/admin/campaigns?preset=' + profitPreset),
+      apiFetch('/api/admin/profits')
+    ]);
+    const profitMap = {};
+    profits.forEach(p => profitMap[p.campaign_id] = p);
+
+    if (!campaigns.length) {
+      document.getElementById('profit-tbody').innerHTML = '<tr><td colspan="8" class="empty">No campaigns found</td></tr>';
+      return;
+    }
+
+    const rows = campaigns.map(c => {
+      const p = profitMap[c.campaign_id] || {};
+      const cs = p.closing_sales || 0;
+      const ns = p.nett_sales || 0;
+      const co = p.commission || 0;
+      const roi = c.spend && co ? Math.round(co / c.spend * 100) / 100 : 0;
+      const rowId = 'prow-' + c.campaign_id.replace(/[^a-z0-9]/gi,'_');
+      return `
+        <tr id="${rowId}-tr">
+          <td><div class="camp-name">${escHtml(c.campaign_name)}</div><div class="camp-acc">${escHtml(c.account_label||'')}</div></td>
+          <td class="r gold-val">${rm(c.spend)}</td>
+          <td class="r">${c.leads || '—'}</td>
+          <td class="r">${cs || '<span style="color:var(--muted)">—</span>'}</td>
+          <td class="r" style="color:var(--muted);">${ns ? rm(ns) : '—'}</td>
+          <td class="r green-val">${co ? rm(co) : '<span style="color:var(--muted)">—</span>'}</td>
+          <td class="r">${roiBadge(roi)}</td>
+          <td class="r"><button class="btn-ghost" style="padding:5px 12px;font-size:10px;" onclick="toggleProfitForm('${escAttr(c.campaign_id)}','${escAttr(c.campaign_name)}',${cs},${ns},${co})">Edit</button></td>
+        </tr>
+        <tr id="${rowId}-form-tr" style="display:none;">
+          <td colspan="8">
+            <div class="profit-row-form open" id="${rowId}-form">
+              <div class="form-grid">
+                <label>Closing Sales (units)<input type="number" id="${rowId}-cs" value="${cs}" min="0" /></label>
+                <label>Nett Sales (RM)<input type="number" id="${rowId}-ns" value="${ns}" min="0" /></label>
+                <label>Commission (RM)<input type="number" id="${rowId}-co" value="${co}" min="0" /></label>
+              </div>
+              <div style="display:flex;gap:8px;">
+                <button class="btn-primary" style="padding:8px 18px;font-size:10px;" onclick="saveProfit('${escAttr(c.campaign_id)}','${escAttr(c.campaign_name)}','${rowId}')">Save</button>
+                <button class="btn-ghost" style="padding:8px 14px;font-size:10px;" onclick="closeProfitForm('${rowId}')">Cancel</button>
+              </div>
+            </div>
+          </td>
+        </tr>
+      `;
+    }).join('');
+
+    document.getElementById('profit-tbody').innerHTML = rows;
+  } catch(e) {
+    document.getElementById('profit-tbody').innerHTML = '<tr><td colspan="8" class="empty">Failed — ' + e.message + '</td></tr>';
+  }
+}
+
+function toggleProfitForm(cid, cname, cs, ns, co) {
+  const rowId = 'prow-' + cid.replace(/[^a-z0-9]/gi,'_');
+  const formTr = document.getElementById(rowId + '-form-tr');
+  formTr.style.display = formTr.style.display === 'none' ? '' : 'none';
+}
+
+function closeProfitForm(rowId) {
+  const formTr = document.getElementById(rowId + '-form-tr');
+  if (formTr) formTr.style.display = 'none';
+}
+
+async function saveProfit(cid, cname, rowId) {
+  const cs = parseInt(document.getElementById(rowId + '-cs').value) || 0;
+  const ns = parseFloat(document.getElementById(rowId + '-ns').value) || 0;
+  const co = parseFloat(document.getElementById(rowId + '-co').value) || 0;
+  try {
+    await apiFetch('/api/admin/profit', {
+      method: 'POST',
+      body: JSON.stringify({campaign_id: cid, campaign_name: cname, closing_sales: cs, nett_sales: ns, commission: co})
+    });
+    showToast('✓ Saved — ' + cname.substring(0,30));
+    closeProfitForm(rowId);
+    loadProfitTab();
+  } catch(e) {
+    showToast('Error: ' + e.message, 'err');
+  }
+}
+
+// ── Investors ──────────────────────────────────────────────
+
+async function loadInvestors() {
+  const el = document.getElementById('investor-list');
+  if (!el) return;
+  el.innerHTML = '<div class="loading">Loading…</div>';
+  try {
+    const users = await apiFetch('/api/admin/investors');
+    const investors = users.filter(u => u.role === 'investor');
+    if (!investors.length) {
+      el.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:20px 0;">No investors yet.</div>';
+      return;
+    }
+    el.innerHTML = investors.map(u => `
+      <div class="investor-card">
+        <div>
+          <div class="inv-name">${escHtml(u.name)}</div>
+          <div class="inv-email">${escHtml(u.email)}</div>
+        </div>
+        <div class="inv-actions">
+          <span style="font-size:10px;color:var(--muted);">#${u.id}</span>
+          <button class="btn-danger" onclick="deleteInvestor(${u.id},'${escAttr(u.name)}')">Remove</button>
+        </div>
+      </div>
+    `).join('');
+  } catch(e) {
+    el.innerHTML = '<div style="color:var(--red);font-size:12px;">Failed — ' + e.message + '</div>';
+  }
+  // Also refresh assign investor select
+  loadAssignInvestorSelect();
+}
+
+async function createInvestor() {
+  const name  = document.getElementById('inv-name').value.trim();
+  const email = document.getElementById('inv-email').value.trim();
+  const pw    = document.getElementById('inv-pw').value;
+  if (!name || !email || !pw) { showToast('Fill in all fields', 'err'); return; }
+  try {
+    await apiFetch('/api/admin/investors', {method: 'POST', body: JSON.stringify({name, email, password: pw})});
+    document.getElementById('inv-name').value = '';
+    document.getElementById('inv-email').value = '';
+    document.getElementById('inv-pw').value = '';
+    showToast('✓ Investor created — ' + name);
+    loadInvestors();
+  } catch(e) {
+    showToast('Error: ' + e.message, 'err');
+  }
+}
+
+async function deleteInvestor(id, name) {
+  if (!confirm('Remove investor "' + name + '"? This also removes their assignments.')) return;
+  try {
+    await apiFetch('/api/admin/investors/' + id, {method: 'DELETE'});
+    showToast('Removed ' + name);
+    loadInvestors();
+  } catch(e) {
+    showToast('Error: ' + e.message, 'err');
+  }
+}
+
+// ── Assignments ───────────────────────────────────────────
+
+async function loadAssignTab() {
+  loadAssignInvestorSelect();
+  if (!allCampaigns.length) {
+    try {
+      allCampaigns = await apiFetch('/api/admin/campaigns?preset=' + currentPreset);
+    } catch(e) {}
+  }
+}
+
+async function loadAssignInvestorSelect() {
+  try {
+    const users = await apiFetch('/api/admin/investors');
+    const investors = users.filter(u => u.role === 'investor');
+    const sel = document.getElementById('assign-investor-select');
+    const prev = sel.value;
+    sel.innerHTML = '<option value="">— Choose investor —</option>' +
+      investors.map(u => `<option value="${u.id}">${escHtml(u.name)} (${escHtml(u.email)})</option>`).join('');
+    if (prev) sel.value = prev;
+  } catch(e) {}
+}
+
+async function loadAssignments() {
+  const uid = document.getElementById('assign-investor-select').value;
+  const area = document.getElementById('assign-area');
+  if (!uid) { area.style.display = 'none'; return; }
+  area.style.display = 'block';
+
+  document.getElementById('avail-campaigns').innerHTML = '<div class="loading">Loading…</div>';
+  document.getElementById('assigned-campaigns').innerHTML = '<div class="loading">Loading…</div>';
+
+  try {
+    if (!allCampaigns.length) {
+      allCampaigns = await apiFetch('/api/admin/campaigns?preset=' + currentPreset);
+    }
+    const assigned = await apiFetch('/api/admin/assignments/' + uid);
+    const assignedIds = new Set(assigned.map(a => a.campaign_id));
+
+    const available = allCampaigns.filter(c => !assignedIds.has(c.campaign_id));
+    const assignedFull = allCampaigns.filter(c => assignedIds.has(c.campaign_id));
+
+    document.getElementById('avail-campaigns').innerHTML = available.length
+      ? available.map(c => `
+          <div class="assign-item">
+            <div class="assign-item-name">
+              <div>${escHtml(c.campaign_name)}</div>
+              <div class="assign-item-acc">${escHtml(c.account_label||'')} · RM ${c.spend} spend · ${c.leads} leads</div>
+            </div>
+            <button class="btn-ghost" style="padding:4px 12px;font-size:10px;" onclick="doAssign(${uid},${c.account_idx},'${escAttr(c.campaign_id)}','${escAttr(c.campaign_name)}')">+ Assign</button>
+          </div>`).join('')
+      : '<div style="color:var(--muted);font-size:12px;padding:8px 0;">All campaigns assigned.</div>';
+
+    document.getElementById('assigned-campaigns').innerHTML = assignedFull.length
+      ? assignedFull.map(c => `
+          <div class="assign-item">
+            <div class="assign-item-name">
+              <div>${escHtml(c.campaign_name)}</div>
+              <div class="assign-item-acc">${escHtml(c.account_label||'')}</div>
+            </div>
+            <button class="btn-danger" style="padding:4px 10px;font-size:10px;" onclick="doUnassign(${uid},'${escAttr(c.campaign_id)}')">Remove</button>
+          </div>`).join('')
+      : '<div style="color:var(--muted);font-size:12px;padding:8px 0;">None assigned yet.</div>';
+
+  } catch(e) {
+    document.getElementById('avail-campaigns').innerHTML = '<div style="color:var(--red);font-size:12px;">' + e.message + '</div>';
+  }
+}
+
+async function doAssign(uid, accIdx, cid, cname) {
+  try {
+    await apiFetch('/api/admin/assign', {method:'POST', body: JSON.stringify({user_id:uid, account_idx:accIdx, campaign_id:cid, campaign_name:cname})});
+    showToast('✓ Assigned — ' + cname.substring(0,30));
+    loadAssignments();
+  } catch(e) {
+    showToast('Error: ' + e.message, 'err');
+  }
+}
+
+async function doUnassign(uid, cid) {
+  try {
+    await apiFetch('/api/admin/assign?user_id=' + uid + '&campaign_id=' + encodeURIComponent(cid), {method:'DELETE'});
+    showToast('Removed assignment');
+    loadAssignments();
+  } catch(e) {
+    showToast('Error: ' + e.message, 'err');
+  }
+}
+
+// ── Analyze with Claude ───────────────────────────────────
+
+async function openClaudeAnalysis() {
+  try {
+    let campaigns = allCampaigns;
+    if (!campaigns.length) {
+      campaigns = await apiFetch('/api/admin/campaigns?preset=' + currentPreset);
+    }
+    const profits = await apiFetch('/api/admin/profits');
+    const profitMap = {};
+    profits.forEach(p => profitMap[p.campaign_id] = p);
+
+    const enriched = campaigns.map(c => {
+      const p = profitMap[c.campaign_id] || {};
+      const sp = c.spend || 0;
+      const co = p.commission || 0;
+      return {
+        ...c,
+        closing_sales: p.closing_sales || 0,
+        nett_sales:    p.nett_sales || 0,
+        commission:    co,
+        roi:           sp && co ? Math.round(co / sp * 100) / 100 : 0,
+      };
+    });
+
+    const totals = enriched.reduce((acc, c) => ({
+      spend:      acc.spend + (c.spend||0),
+      leads:      acc.leads + (c.leads||0),
+      closings:   acc.closings + (c.closing_sales||0),
+      commission: acc.commission + (c.commission||0),
+    }), {spend:0, leads:0, closings:0, commission:0});
+
+    const presetLabels = {
+      'last_week_sun_sat':  'Last Week (Sun–Sat)',
+      'this_week_sun_today':'This Week (Sun–Today)',
+      'this_month':         'This Month',
+      'last_month':         'Last Month',
+    };
+
+    const lines = enriched.map(c =>
+      `• ${c.campaign_name} [${c.account_label||''}]\n` +
+      `  Spend: RM ${c.spend} | Leads: ${c.leads} | CPL: RM ${c.cpl||'—'} | CPM: RM ${c.cpm||'—'} | CTR: ${c.ctr||'—'}%\n` +
+      `  Closings: ${c.closing_sales||'—'} | Nett Sales: RM ${c.nett_sales||'—'} | Commission: RM ${c.commission||'—'} | ROI: ${c.roi||'—'}x`
+    ).join('\n\n');
+
+    const prompt = `JPROP REAL ESTATE — META ADS PERFORMANCE REPORT
+Period: ${presetLabels[currentPreset] || currentPreset}
+Generated: ${new Date().toLocaleDateString('en-MY', {day:'numeric',month:'long',year:'numeric'})}
+
+═══════════════════════════════════════════
+CAMPAIGN BREAKDOWN
+═══════════════════════════════════════════
+${lines || '(no campaign data)'}
+
+═══════════════════════════════════════════
+OVERALL TOTALS
+═══════════════════════════════════════════
+Total Ad Spend:    RM ${totals.spend.toLocaleString()}
+Total Leads:       ${totals.leads}
+Avg CPL:           RM ${totals.leads ? Math.round(totals.spend/totals.leads) : '—'}
+Total Closings:    ${totals.closings || '—'}
+Total Commission:  RM ${totals.commission.toLocaleString()}
+Overall ROI:       ${totals.spend && totals.commission ? Math.round(totals.commission/totals.spend*100)/100 + 'x' : '—'}
+
+═══════════════════════════════════════════
+ANALYSIS REQUEST
+═══════════════════════════════════════════
+Please analyze this META ads data for my real estate business JPROP. I want to know:
+
+1. PERFORMANCE RANKING — Which campaigns deliver the best ROI and lead quality?
+2. SPEND EFFICIENCY — Any campaigns with high spend but poor results? Should I pause or cut budget?
+3. SCALE OPPORTUNITIES — Which campaigns should I increase budget on?
+4. CPL ANALYSIS — Is the cost per lead healthy? Industry benchmark for property leads is RM 30–80.
+5. CONVERSION FUNNEL — Leads to closings ratio — what's the drop-off?
+6. BUDGET RECOMMENDATIONS — Specific reallocation suggestions with numbers.
+7. RED FLAGS — Any urgent concerns?
+8. NEXT WEEK STRATEGY — What should I do differently next week?
+
+Be specific with numbers. Give direct recommendations.`;
+
+    claudePromptText = prompt;
+    document.getElementById('claude-prompt-preview').textContent = prompt;
+    document.getElementById('claude-modal').classList.add('show');
+
+    // Auto-copy
+    try {
+      await navigator.clipboard.writeText(prompt);
+    } catch(e) {}
+
+  } catch(e) {
+    showToast('Failed to generate report: ' + e.message, 'err');
+  }
+}
+
+async function copyClaudePrompt() {
+  try {
+    await navigator.clipboard.writeText(claudePromptText);
+    showToast('📋 Copied to clipboard!');
+  } catch(e) {
+    showToast('Copy failed — please select and copy manually', 'err');
+  }
+}
+
+function closeClaudeModal() {
+  document.getElementById('claude-modal').classList.remove('show');
+}
+
+// close modal on overlay click
+document.getElementById('claude-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeClaudeModal();
+});
+
+// ── Utility ───────────────────────────────────────────────
+
+function escHtml(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function escAttr(s) {
+  return String(s||'').replace(/'/g,"\\'").replace(/"/g,'&quot;');
+}
 </script>
 </body>
 </html>
