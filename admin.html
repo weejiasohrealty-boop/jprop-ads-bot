@@ -3,20 +3,21 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>JPROP — Admin Portal</title>
+<title>JPROP â Admin Portal</title>
 <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,wght@0,300;1,300&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{--ink:#0a0a0a;--paper:#f7f5f0;--muted:rgba(247,245,240,0.45);--line:rgba(247,245,240,0.09);--gold:#b08d3e;--green:#4caf82;--red:#e05555;--yellow:#e0b755;--blue:#5b8dee;--surface:rgba(247,245,240,0.03);}
 *{margin:0;padding:0;box-sizing:border-box;}
 body{background:var(--ink);color:var(--paper);font-family:'Inter',sans-serif;font-weight:300;min-height:100vh;}
 
-/* ── Login ── */
+/* ââ Login ââ */
 #login-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px;}
 .login-card{width:100%;max-width:360px;text-align:center;}
 .brand{font-family:'Newsreader',serif;font-size:38px;font-weight:300;letter-spacing:0.04em;margin-bottom:4px;}
 .brand-sub{font-size:11px;letter-spacing:0.22em;text-transform:uppercase;color:var(--muted);margin-bottom:52px;}
 input,select,textarea{width:100%;background:rgba(247,245,240,0.05);border:1px solid var(--line);color:var(--paper);padding:11px 14px;font-size:13px;font-family:'Inter',sans-serif;font-weight:300;border-radius:4px;outline:none;transition:border 0.2s;}
 input:focus,select:focus,textarea:focus{border-color:var(--gold);}
+input:-webkit-autofill,input:-webkit-autofill:hover,input:-webkit-autofill:focus{-webkit-box-shadow:0 0 0px 1000px rgba(10,10,10,0.98) inset !important;-webkit-text-fill-color:#f7f5f0 !important;transition:background-color 5000s;caret-color:#f7f5f0;}
 select option{background:#1a1a1a;}
 textarea{resize:vertical;min-height:72px;}
 .btn-primary{background:var(--gold);color:var(--ink);border:none;padding:11px 22px;font-size:11px;font-family:'Inter',sans-serif;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;cursor:pointer;border-radius:4px;transition:opacity 0.2s;}
@@ -30,7 +31,7 @@ textarea{resize:vertical;min-height:72px;}
 .btn-claude:hover{opacity:0.9;}
 .err{color:var(--red);font-size:12px;margin-top:10px;min-height:18px;}
 
-/* ── App shell ── */
+/* ââ App shell ââ */
 #app{display:none;min-height:100vh;}
 header{display:flex;align-items:center;justify-content:space-between;padding:18px 48px;border-bottom:1px solid var(--line);gap:16px;flex-wrap:wrap;}
 .logo{font-size:13px;letter-spacing:0.14em;font-weight:500;white-space:nowrap;}
@@ -38,7 +39,7 @@ header{display:flex;align-items:center;justify-content:space-between;padding:18p
 .logo-tag{font-size:10px;letter-spacing:0.1em;color:var(--muted);margin-left:8px;background:rgba(176,141,62,0.15);padding:2px 8px;border-radius:10px;vertical-align:middle;}
 .header-right{display:flex;align-items:center;gap:12px;}
 
-/* ── Tabs ── */
+/* ââ Tabs ââ */
 .tabs{display:flex;gap:0;border-bottom:1px solid var(--line);padding:0 48px;overflow-x:auto;}
 .tab-btn{background:none;border:none;color:var(--muted);padding:16px 20px;font-size:12px;letter-spacing:0.08em;text-transform:uppercase;cursor:pointer;font-family:'Inter',sans-serif;border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap;transition:color 0.2s;}
 .tab-btn.active{color:var(--gold);border-bottom-color:var(--gold);}
@@ -46,14 +47,14 @@ header{display:flex;align-items:center;justify-content:space-between;padding:18p
 .tab-panel{display:none;padding:32px 48px 60px;}
 .tab-panel.active{display:block;}
 
-/* ── Preset bar ── */
+/* ââ Preset bar ââ */
 .preset-bar{display:flex;gap:8px;margin-bottom:28px;flex-wrap:wrap;align-items:center;}
 .preset-btn{background:none;border:1px solid var(--line);color:var(--muted);padding:7px 14px;font-size:11px;letter-spacing:0.06em;border-radius:4px;cursor:pointer;font-family:'Inter',sans-serif;transition:all 0.2s;}
 .preset-btn.active{border-color:var(--gold);color:var(--gold);}
 .refresh-btn{background:none;border:1px solid var(--line);color:var(--muted);padding:7px 12px;font-size:12px;border-radius:4px;cursor:pointer;font-family:'Inter',sans-serif;margin-left:auto;transition:all 0.2s;}
 .refresh-btn:hover{color:var(--paper);}
 
-/* ── KPI Summary row ── */
+/* ââ KPI Summary row ââ */
 .kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:32px;}
 .kpi{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:18px 20px;}
 .kpi.hi{border-color:rgba(176,141,62,0.25);background:rgba(176,141,62,0.04);}
@@ -63,7 +64,7 @@ header{display:flex;align-items:center;justify-content:space-between;padding:18p
 .kpi-value.gold{color:var(--gold);}
 .kpi-value.green{color:var(--green);}
 
-/* ── Tables ── */
+/* ââ Tables ââ */
 .table-wrap{overflow-x:auto;margin-bottom:32px;}
 table{width:100%;border-collapse:collapse;font-size:12.5px;min-width:700px;}
 th{text-align:left;padding:9px 14px;color:var(--muted);font-weight:400;font-size:10px;letter-spacing:0.12em;text-transform:uppercase;border-bottom:1px solid var(--line);}
@@ -84,21 +85,21 @@ tr:hover td{background:rgba(247,245,240,0.02);}
 .empty,.loading{text-align:center;padding:48px;color:var(--muted);font-size:13px;}
 .loading{font-style:italic;}
 
-/* ── Section headers ── */
+/* ââ Section headers ââ */
 .section-title{font-family:'Newsreader',serif;font-size:22px;font-weight:300;font-style:italic;margin-bottom:20px;}
 .section-subtitle{font-size:12px;color:var(--muted);margin-top:-14px;margin-bottom:20px;}
 .row-gap{display:flex;gap:16px;margin-bottom:12px;flex-wrap:wrap;}
 .row-gap>*{flex:1;min-width:160px;}
 .label{font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;}
 
-/* ── Investor cards ── */
+/* ââ Investor cards ââ */
 .investor-list{display:grid;gap:12px;margin-top:20px;}
 .investor-card{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:16px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
 .inv-name{font-size:14px;font-weight:400;}
 .inv-email{font-size:11px;color:var(--muted);margin-top:2px;}
 .inv-actions{display:flex;gap:8px;align-items:center;}
 
-/* ── Assign UI ── */
+/* ââ Assign UI ââ */
 .assign-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:16px;}
 .assign-col{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:16px;}
 .assign-col-title{font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-bottom:12px;}
@@ -108,20 +109,20 @@ tr:hover td{background:rgba(247,245,240,0.02);}
 .assign-item-acc{font-size:10px;color:var(--muted);}
 .assign-check{width:16px;height:16px;cursor:pointer;accent-color:var(--gold);}
 
-/* ── Profit form ── */
+/* ââ Profit form ââ */
 .profit-table-wrap .profit-row-form{display:none;padding:16px;background:rgba(176,141,62,0.04);border:1px solid rgba(176,141,62,0.15);border-radius:4px;margin:6px 0;}
 .profit-row-form.open{display:block;}
 .form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:12px;}
 .form-grid label{display:flex;flex-direction:column;gap:5px;font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);}
 .form-grid input{padding:8px 10px;font-size:13px;}
 
-/* ── Toast ── */
+/* ââ Toast ââ */
 .toast{position:fixed;bottom:32px;right:32px;background:#1a1a1a;border:1px solid var(--line);color:var(--paper);padding:14px 20px;border-radius:6px;font-size:13px;z-index:1000;opacity:0;transform:translateY(10px);transition:all 0.3s;max-width:320px;pointer-events:none;}
 .toast.show{opacity:1;transform:translateY(0);}
 .toast.toast-ok{border-color:rgba(76,175,130,0.4);background:rgba(76,175,130,0.08);}
 .toast.toast-err{border-color:rgba(224,85,85,0.4);}
 
-/* ── Claude modal ── */
+/* ââ Claude modal ââ */
 .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:500;align-items:center;justify-content:center;padding:20px;}
 .modal-overlay.show{display:flex;}
 .modal{background:#111;border:1px solid var(--line);border-radius:8px;padding:28px;width:100%;max-width:640px;max-height:80vh;overflow-y:auto;}
@@ -158,7 +159,7 @@ tr:hover td{background:rgba(247,245,240,0.02);}
     <div class="logo">JP<span class="logo-accent">R</span>OP <span class="logo-tag">Admin</span></div>
     <div class="header-right">
       <button class="btn-claude" onclick="openClaudeAnalysis()">
-        ✦ Analyze with Claude
+        â¦ Analyze with Claude
       </button>
       <button class="btn-ghost" onclick="logout()">Sign Out</button>
     </div>
@@ -172,23 +173,31 @@ tr:hover td{background:rgba(247,245,240,0.02);}
     <button class="tab-btn" onclick="switchTab('assign',this)">Assignments</button>
   </div>
 
-  <!-- ═══ OVERVIEW TAB ═══ -->
+  <!-- âââ OVERVIEW TAB âââ -->
   <div id="tab-overview" class="tab-panel active">
     <div class="preset-bar">
       <button class="preset-btn active" onclick="setPreset('last_week_sun_sat',this)">Last Week</button>
       <button class="preset-btn" onclick="setPreset('this_week_sun_today',this)">This Week</button>
       <button class="preset-btn" onclick="setPreset('this_month',this)">This Month</button>
       <button class="preset-btn" onclick="setPreset('last_month',this)">Last Month</button>
-      <button class="refresh-btn" onclick="loadOverview()">↻ Refresh</button>
+      <button class="preset-btn" onclick="setPreset('this_year',this)">This Year</button>
+      <button class="preset-btn" id="custom-preset-btn" onclick="toggleCustomDate()">Custom â¾</button>
+      <button class="refresh-btn" onclick="loadOverview()">â» Refresh</button>
+    </div>
+    <div id="custom-date-bar" style="display:none;gap:8px;margin-bottom:16px;align-items:center;flex-wrap:wrap;">
+      <input type="date" id="custom-since" style="width:auto;margin-bottom:0;" />
+      <span style="color:var(--muted);font-size:12px;">to</span>
+      <input type="date" id="custom-until" style="width:auto;margin-bottom:0;" />
+      <button class="preset-btn" onclick="applyCustomDate()">Apply</button>
     </div>
 
     <div class="kpi-row" id="ov-kpis">
-      <div class="kpi hi"><div class="kpi-label">Total Spend</div><div class="kpi-value gold" id="ov-spend">…</div></div>
-      <div class="kpi"><div class="kpi-label">Total Leads</div><div class="kpi-value" id="ov-leads">…</div></div>
-      <div class="kpi"><div class="kpi-label">Avg CPL</div><div class="kpi-value" id="ov-cpl">…</div></div>
-      <div class="kpi"><div class="kpi-label">Closings</div><div class="kpi-value gold" id="ov-closing">…</div></div>
-      <div class="kpi hi2"><div class="kpi-label">Commission</div><div class="kpi-value green" id="ov-commission">…</div></div>
-      <div class="kpi hi2"><div class="kpi-label">ROI</div><div class="kpi-value green" id="ov-roi">…</div></div>
+      <div class="kpi hi"><div class="kpi-label">Total Spend</div><div class="kpi-value gold" id="ov-spend">â¦</div></div>
+      <div class="kpi"><div class="kpi-label">Total Leads</div><div class="kpi-value" id="ov-leads">â¦</div></div>
+      <div class="kpi"><div class="kpi-label">Avg CPL</div><div class="kpi-value" id="ov-cpl">â¦</div></div>
+      <div class="kpi"><div class="kpi-label">Closings</div><div class="kpi-value gold" id="ov-closing">â¦</div></div>
+      <div class="kpi hi2"><div class="kpi-label">Commission</div><div class="kpi-value green" id="ov-commission">â¦</div></div>
+      <div class="kpi hi2"><div class="kpi-label">ROI</div><div class="kpi-value green" id="ov-roi">â¦</div></div>
     </div>
 
     <div class="section-title">All Campaigns</div>
@@ -202,6 +211,7 @@ tr:hover td{background:rgba(247,245,240,0.02);}
             <th class="r">Leads</th>
             <th class="r">CPL</th>
             <th class="r">CPM</th>
+            <th class="r">Hook %</th>
             <th class="r">CTR</th>
             <th class="r">Closings</th>
             <th class="r">Commission</th>
@@ -209,13 +219,13 @@ tr:hover td{background:rgba(247,245,240,0.02);}
           </tr>
         </thead>
         <tbody id="ov-tbody">
-          <tr><td colspan="10" class="loading">Loading campaigns…</td></tr>
+          <tr><td colspan="11" class="loading">Loading campaignsâ¦</td></tr>
         </tbody>
       </table>
     </div>
   </div>
 
-  <!-- ═══ PROFIT ENTRY TAB ═══ -->
+  <!-- âââ PROFIT ENTRY TAB âââ -->
   <div id="tab-profit" class="tab-panel">
     <div class="section-title">Profit Entry</div>
     <div class="section-subtitle">Enter closing sales, nett sales and commission per campaign. Data is shown to investors.</div>
@@ -225,7 +235,7 @@ tr:hover td{background:rgba(247,245,240,0.02);}
       <button class="preset-btn" onclick="setProfitPreset('this_week_sun_today',this)">This Week</button>
       <button class="preset-btn" onclick="setProfitPreset('this_month',this)">This Month</button>
       <button class="preset-btn" onclick="setProfitPreset('last_month',this)">Last Month</button>
-      <button class="refresh-btn" onclick="loadProfitTab()">↻ Refresh</button>
+      <button class="refresh-btn" onclick="loadProfitTab()">â» Refresh</button>
     </div>
 
     <div class="table-wrap profit-table-wrap">
@@ -243,13 +253,13 @@ tr:hover td{background:rgba(247,245,240,0.02);}
           </tr>
         </thead>
         <tbody id="profit-tbody">
-          <tr><td colspan="8" class="loading">Loading…</td></tr>
+          <tr><td colspan="8" class="loading">Loadingâ¦</td></tr>
         </tbody>
       </table>
     </div>
   </div>
 
-  <!-- ═══ INVESTORS TAB ═══ -->
+  <!-- âââ INVESTORS TAB âââ -->
   <div id="tab-investors" class="tab-panel">
     <div class="section-title">Investor Accounts</div>
 
@@ -266,11 +276,11 @@ tr:hover td{background:rgba(247,245,240,0.02);}
 
     <div class="section-title" style="font-size:16px;">Existing Investors</div>
     <div id="investor-list" class="investor-list">
-      <div class="loading">Loading investors…</div>
+      <div class="loading">Loading investorsâ¦</div>
     </div>
   </div>
 
-  <!-- ═══ ASSIGNMENTS TAB ═══ -->
+  <!-- âââ ASSIGNMENTS TAB âââ -->
   <div id="tab-assign" class="tab-panel">
     <div class="section-title">Campaign Assignments</div>
     <div class="section-subtitle">Select an investor, then tick/untick campaigns to assign them.</div>
@@ -278,7 +288,7 @@ tr:hover td{background:rgba(247,245,240,0.02);}
     <div style="max-width:300px;margin-bottom:24px;">
       <div class="label" style="margin-bottom:6px;">Select Investor</div>
       <select id="assign-investor-select" onchange="loadAssignments()">
-        <option value="">— Choose investor —</option>
+        <option value="">â Choose investor â</option>
       </select>
     </div>
 
@@ -286,7 +296,7 @@ tr:hover td{background:rgba(247,245,240,0.02);}
       <div class="assign-grid">
         <div class="assign-col">
           <div class="assign-col-title">Available Campaigns</div>
-          <div id="avail-campaigns"><div class="loading">Loading…</div></div>
+          <div id="avail-campaigns"><div class="loading">Loadingâ¦</div></div>
         </div>
         <div class="assign-col">
           <div class="assign-col-title">Assigned Campaigns</div>
@@ -297,7 +307,7 @@ tr:hover td{background:rgba(247,245,240,0.02);}
   </div>
 </div>
 
-<!-- ── Claude Modal ── -->
+<!-- ââ Claude Modal ââ -->
 <div class="modal-overlay" id="claude-modal">
   <div class="modal">
     <div class="modal-title">Analyze with Claude</div>
@@ -305,8 +315,8 @@ tr:hover td{background:rgba(247,245,240,0.02);}
     <div class="modal-body" id="claude-prompt-preview"></div>
     <div class="modal-actions">
       <button class="btn-ghost" onclick="closeClaudeModal()">Close</button>
-      <button class="btn-ghost" onclick="copyClaudePrompt()">📋 Copy Again</button>
-      <button class="btn-claude" onclick="window.open('https://claude.ai/new','_blank')">Open Claude ↗</button>
+      <button class="btn-ghost" onclick="copyClaudePrompt()">ð Copy Again</button>
+      <button class="btn-claude" onclick="window.open('https://claude.ai/new','_blank')">Open Claude â</button>
     </div>
   </div>
 </div>
@@ -319,22 +329,24 @@ const API = '';
 let TOKEN = localStorage.getItem('jprop_token') || '';
 let currentPreset = 'last_week_sun_sat';
 let profitPreset  = 'last_week_sun_sat';
+let customSince   = '';
+let customUntil   = '';
 let allCampaigns  = [];
 let allProfits    = {};
 let claudePromptText = '';
 
-// ── Helpers ──────────────────────────────────────────────
+// ââ Helpers ââââââââââââââââââââââââââââââââââââââââââââââ
 
 function rm(v) {
   return 'RM ' + Number(v).toLocaleString('en-MY', {minimumFractionDigits: 0, maximumFractionDigits: 0});
 }
 function cplBadge(v) {
-  if (!v) return '<span style="color:var(--muted)">—</span>';
+  if (!v) return '<span style="color:var(--muted)">â</span>';
   const cls = v <= 50 ? 'bg' : v <= 100 ? 'by' : 'br';
   return '<span class="badge ' + cls + '">RM ' + v + '</span>';
 }
 function roiBadge(v) {
-  if (!v) return '<span style="color:var(--muted)">—</span>';
+  if (!v) return '<span style="color:var(--muted)">â</span>';
   const cls = v >= 2 ? 'bg' : v >= 1 ? 'by' : 'br';
   return '<span class="badge ' + cls + '">' + v + 'x</span>';
 }
@@ -358,7 +370,7 @@ async function apiFetch(path, opts={}) {
   return r.json();
 }
 
-// ── Auth ──────────────────────────────────────────────────
+// ââ Auth ââââââââââââââââââââââââââââââââââââââââââââââââââ
 
 async function doLogin() {
   const email = document.getElementById('l-email').value.trim();
@@ -373,7 +385,7 @@ async function doLogin() {
     const d = await r.json();
     if (!r.ok) { document.getElementById('l-err').textContent = d.detail || 'Login failed'; return; }
     if (d.role !== 'admin') {
-      document.getElementById('l-err').textContent = 'Admin access required. Redirecting…';
+      document.getElementById('l-err').textContent = 'Admin access required. Redirectingâ¦';
       setTimeout(() => window.location.href = '/', 1500);
       return;
     }
@@ -407,7 +419,7 @@ if (TOKEN && localStorage.getItem('jprop_role') === 'admin') {
   window.location.href = '/';
 }
 
-// ── Tabs ──────────────────────────────────────────────────
+// ââ Tabs ââââââââââââââââââââââââââââââââââââââââââââââââââ
 
 function switchTab(name, btn) {
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
@@ -419,24 +431,58 @@ function switchTab(name, btn) {
   if (name === 'assign')    loadAssignTab();
 }
 
-// ── Overview ──────────────────────────────────────────────
+// ââ Overview ââââââââââââââââââââââââââââââââââââââââââââââ
 
 function setPreset(p, btn) {
   currentPreset = p;
   document.querySelectorAll('#tab-overview .preset-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
+  if (p !== 'custom') {
+    document.getElementById('custom-date-bar').style.display = 'none';
+  }
+  loadOverview();
+}
+
+function toggleCustomDate() {
+  const bar = document.getElementById('custom-date-bar');
+  const isOpen = bar.style.display === 'flex';
+  bar.style.display = isOpen ? 'none' : 'flex';
+  if (!isOpen) {
+    // Set sensible defaults: first of current month to today
+    const now = new Date();
+    const y = now.getFullYear(), m = String(now.getMonth()+1).padStart(2,'0'), d = String(now.getDate()).padStart(2,'0');
+    const firstOfMonth = y + '-' + m + '-01';
+    const today = y + '-' + m + '-' + d;
+    document.getElementById('custom-since').value = customSince || firstOfMonth;
+    document.getElementById('custom-until').value = customUntil || today;
+  }
+}
+
+function applyCustomDate() {
+  const since = document.getElementById('custom-since').value;
+  const until = document.getElementById('custom-until').value;
+  if (!since || !until) { showToast('Please pick a start and end date', 'err'); return; }
+  customSince = since;
+  customUntil = until;
+  currentPreset = 'custom';
+  document.querySelectorAll('#tab-overview .preset-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('custom-preset-btn').classList.add('active');
   loadOverview();
 }
 
 async function loadOverview() {
   ['ov-spend','ov-leads','ov-cpl','ov-closing','ov-commission','ov-roi'].forEach(id =>
-    document.getElementById(id).textContent = '…'
+    document.getElementById(id).textContent = 'â¦'
   );
-  document.getElementById('ov-tbody').innerHTML = '<tr><td colspan="10" class="loading">Fetching live data…</td></tr>';
+  document.getElementById('ov-tbody').innerHTML = '<tr><td colspan="11" class="loading">Fetching live dataâ¦</td></tr>';
 
   try {
+    let url = '/api/admin/campaigns?preset=' + currentPreset;
+    if (currentPreset === 'custom' && customSince && customUntil) {
+      url = '/api/admin/campaigns?preset=custom&since=' + customSince + '&until=' + customUntil;
+    }
     const [campaigns, profits] = await Promise.all([
-      apiFetch('/api/admin/campaigns?preset=' + currentPreset),
+      apiFetch(url),
       apiFetch('/api/admin/profits')
     ]);
     allCampaigns = campaigns;
@@ -470,46 +516,47 @@ async function loadOverview() {
 
     document.getElementById('ov-spend').textContent = rm(totals.spend);
     document.getElementById('ov-leads').textContent = totals.leads;
-    document.getElementById('ov-cpl').textContent = totals.cpl ? 'RM ' + totals.cpl : '—';
-    document.getElementById('ov-closing').textContent = totals.closing_sales || '—';
-    document.getElementById('ov-commission').textContent = totals.commission ? rm(totals.commission) : '—';
-    document.getElementById('ov-roi').textContent = totals.roi ? totals.roi + 'x' : '—';
+    document.getElementById('ov-cpl').textContent = totals.cpl ? 'RM ' + totals.cpl : 'â';
+    document.getElementById('ov-closing').textContent = totals.closing_sales || 'â';
+    document.getElementById('ov-commission').textContent = totals.commission ? rm(totals.commission) : 'â';
+    document.getElementById('ov-roi').textContent = totals.roi ? totals.roi + 'x' : 'â';
 
     const rows = enriched.map(c => `
       <tr>
         <td><div class="camp-name">${escHtml(c.campaign_name)}</div></td>
         <td style="color:var(--muted);font-size:11px;">${escHtml(c.account_label||'')}</td>
         <td class="r gold-val">${rm(c.spend)}</td>
-        <td class="r">${c.leads || '—'}</td>
+        <td class="r">${c.leads || 'â'}</td>
         <td class="r">${cplBadge(c.cpl)}</td>
-        <td class="r" style="color:var(--muted);">${c.cpm ? 'RM '+c.cpm : '—'}</td>
-        <td class="r" style="color:var(--muted);">${c.ctr ? c.ctr+'%' : '—'}</td>
-        <td class="r">${c.closing_sales || '<span style="color:var(--muted)">—</span>'}</td>
-        <td class="r green-val">${c.commission ? rm(c.commission) : '<span style="color:var(--muted)">—</span>'}</td>
+        <td class="r" style="color:var(--muted);">${c.cpm ? 'RM '+c.cpm : 'â'}</td>
+        <td class="r" style="color:var(--muted);">${c.hook_pct ? c.hook_pct+'%' : 'â'}</td>
+        <td class="r" style="color:var(--muted);">${c.ctr ? c.ctr+'%' : 'â'}</td>
+        <td class="r">${c.closing_sales || '<span style="color:var(--muted)">â</span>'}</td>
+        <td class="r green-val">${c.commission ? rm(c.commission) : '<span style="color:var(--muted)">â</span>'}</td>
         <td class="r">${roiBadge(c.roi)}</td>
       </tr>
     `).join('');
 
     const totalRow = `
       <tr class="total-row">
-        <td><b>TOTAL</b></td><td>—</td>
+        <td><b>TOTAL</b></td><td>â</td>
         <td class="r"><b>${rm(totals.spend)}</b></td>
         <td class="r"><b>${totals.leads}</b></td>
-        <td class="r">${totals.cpl ? 'RM '+totals.cpl : '—'}</td>
-        <td class="r">—</td><td class="r">—</td>
-        <td class="r"><b>${totals.closing_sales || '—'}</b></td>
-        <td class="r"><b>${totals.commission ? rm(totals.commission) : '—'}</b></td>
-        <td class="r"><b>${totals.roi ? totals.roi+'x' : '—'}</b></td>
+        <td class="r">${totals.cpl ? 'RM '+totals.cpl : 'â'}</td>
+        <td class="r">â</td><td class="r">â</td><td class="r">â</td>
+        <td class="r"><b>${totals.closing_sales || 'â'}</b></td>
+        <td class="r"><b>${totals.commission ? rm(totals.commission) : 'â'}</b></td>
+        <td class="r"><b>${totals.roi ? totals.roi+'x' : 'â'}</b></td>
       </tr>`;
 
-    document.getElementById('ov-tbody').innerHTML = rows + totalRow || '<tr><td colspan="10" class="empty">No campaigns found</td></tr>';
+    document.getElementById('ov-tbody').innerHTML = rows + totalRow || '<tr><td colspan="11" class="empty">No campaigns found</td></tr>';
 
   } catch(e) {
-    document.getElementById('ov-tbody').innerHTML = '<tr><td colspan="10" class="empty">Failed to load — ' + e.message + '</td></tr>';
+    document.getElementById('ov-tbody').innerHTML = '<tr><td colspan="11" class="empty">Failed to load â ' + e.message + '</td></tr>';
   }
 }
 
-// ── Profit Entry ──────────────────────────────────────────
+// ââ Profit Entry ââââââââââââââââââââââââââââââââââââââââââ
 
 function setProfitPreset(p, btn) {
   profitPreset = p;
@@ -519,7 +566,7 @@ function setProfitPreset(p, btn) {
 }
 
 async function loadProfitTab() {
-  document.getElementById('profit-tbody').innerHTML = '<tr><td colspan="8" class="loading">Loading…</td></tr>';
+  document.getElementById('profit-tbody').innerHTML = '<tr><td colspan="8" class="loading">Loadingâ¦</td></tr>';
   try {
     const [campaigns, profits] = await Promise.all([
       apiFetch('/api/admin/campaigns?preset=' + profitPreset),
@@ -544,10 +591,10 @@ async function loadProfitTab() {
         <tr id="${rowId}-tr">
           <td><div class="camp-name">${escHtml(c.campaign_name)}</div><div class="camp-acc">${escHtml(c.account_label||'')}</div></td>
           <td class="r gold-val">${rm(c.spend)}</td>
-          <td class="r">${c.leads || '—'}</td>
-          <td class="r">${cs || '<span style="color:var(--muted)">—</span>'}</td>
-          <td class="r" style="color:var(--muted);">${ns ? rm(ns) : '—'}</td>
-          <td class="r green-val">${co ? rm(co) : '<span style="color:var(--muted)">—</span>'}</td>
+          <td class="r">${c.leads || 'â'}</td>
+          <td class="r">${cs || '<span style="color:var(--muted)">â</span>'}</td>
+          <td class="r" style="color:var(--muted);">${ns ? rm(ns) : 'â'}</td>
+          <td class="r green-val">${co ? rm(co) : '<span style="color:var(--muted)">â</span>'}</td>
           <td class="r">${roiBadge(roi)}</td>
           <td class="r"><button class="btn-ghost" style="padding:5px 12px;font-size:10px;" onclick="toggleProfitForm('${escAttr(c.campaign_id)}','${escAttr(c.campaign_name)}',${cs},${ns},${co})">Edit</button></td>
         </tr>
@@ -571,7 +618,7 @@ async function loadProfitTab() {
 
     document.getElementById('profit-tbody').innerHTML = rows;
   } catch(e) {
-    document.getElementById('profit-tbody').innerHTML = '<tr><td colspan="8" class="empty">Failed — ' + e.message + '</td></tr>';
+    document.getElementById('profit-tbody').innerHTML = '<tr><td colspan="8" class="empty">Failed â ' + e.message + '</td></tr>';
   }
 }
 
@@ -595,7 +642,7 @@ async function saveProfit(cid, cname, rowId) {
       method: 'POST',
       body: JSON.stringify({campaign_id: cid, campaign_name: cname, closing_sales: cs, nett_sales: ns, commission: co})
     });
-    showToast('✓ Saved — ' + cname.substring(0,30));
+    showToast('â Saved â ' + cname.substring(0,30));
     closeProfitForm(rowId);
     loadProfitTab();
   } catch(e) {
@@ -603,12 +650,12 @@ async function saveProfit(cid, cname, rowId) {
   }
 }
 
-// ── Investors ──────────────────────────────────────────────
+// ââ Investors ââââââââââââââââââââââââââââââââââââââââââââââ
 
 async function loadInvestors() {
   const el = document.getElementById('investor-list');
   if (!el) return;
-  el.innerHTML = '<div class="loading">Loading…</div>';
+  el.innerHTML = '<div class="loading">Loadingâ¦</div>';
   try {
     const users = await apiFetch('/api/admin/investors');
     const investors = users.filter(u => u.role === 'investor');
@@ -629,7 +676,7 @@ async function loadInvestors() {
       </div>
     `).join('');
   } catch(e) {
-    el.innerHTML = '<div style="color:var(--red);font-size:12px;">Failed — ' + e.message + '</div>';
+    el.innerHTML = '<div style="color:var(--red);font-size:12px;">Failed â ' + e.message + '</div>';
   }
   // Also refresh assign investor select
   loadAssignInvestorSelect();
@@ -645,7 +692,7 @@ async function createInvestor() {
     document.getElementById('inv-name').value = '';
     document.getElementById('inv-email').value = '';
     document.getElementById('inv-pw').value = '';
-    showToast('✓ Investor created — ' + name);
+    showToast('â Investor created â ' + name);
     loadInvestors();
   } catch(e) {
     showToast('Error: ' + e.message, 'err');
@@ -663,7 +710,7 @@ async function deleteInvestor(id, name) {
   }
 }
 
-// ── Assignments ───────────────────────────────────────────
+// ââ Assignments âââââââââââââââââââââââââââââââââââââââââââ
 
 async function loadAssignTab() {
   loadAssignInvestorSelect();
@@ -680,7 +727,7 @@ async function loadAssignInvestorSelect() {
     const investors = users.filter(u => u.role === 'investor');
     const sel = document.getElementById('assign-investor-select');
     const prev = sel.value;
-    sel.innerHTML = '<option value="">— Choose investor —</option>' +
+    sel.innerHTML = '<option value="">â Choose investor â</option>' +
       investors.map(u => `<option value="${u.id}">${escHtml(u.name)} (${escHtml(u.email)})</option>`).join('');
     if (prev) sel.value = prev;
   } catch(e) {}
@@ -692,8 +739,8 @@ async function loadAssignments() {
   if (!uid) { area.style.display = 'none'; return; }
   area.style.display = 'block';
 
-  document.getElementById('avail-campaigns').innerHTML = '<div class="loading">Loading…</div>';
-  document.getElementById('assigned-campaigns').innerHTML = '<div class="loading">Loading…</div>';
+  document.getElementById('avail-campaigns').innerHTML = '<div class="loading">Loadingâ¦</div>';
+  document.getElementById('assigned-campaigns').innerHTML = '<div class="loading">Loadingâ¦</div>';
 
   try {
     if (!allCampaigns.length) {
@@ -710,7 +757,7 @@ async function loadAssignments() {
           <div class="assign-item">
             <div class="assign-item-name">
               <div>${escHtml(c.campaign_name)}</div>
-              <div class="assign-item-acc">${escHtml(c.account_label||'')} · RM ${c.spend} spend · ${c.leads} leads</div>
+              <div class="assign-item-acc">${escHtml(c.account_label||'')} Â· RM ${c.spend} spend Â· ${c.leads} leads</div>
             </div>
             <button class="btn-ghost" style="padding:4px 12px;font-size:10px;" onclick="doAssign(${uid},${c.account_idx},'${escAttr(c.campaign_id)}','${escAttr(c.campaign_name)}')">+ Assign</button>
           </div>`).join('')
@@ -735,7 +782,7 @@ async function loadAssignments() {
 async function doAssign(uid, accIdx, cid, cname) {
   try {
     await apiFetch('/api/admin/assign', {method:'POST', body: JSON.stringify({user_id:uid, account_idx:accIdx, campaign_id:cid, campaign_name:cname})});
-    showToast('✓ Assigned — ' + cname.substring(0,30));
+    showToast('â Assigned â ' + cname.substring(0,30));
     loadAssignments();
   } catch(e) {
     showToast('Error: ' + e.message, 'err');
@@ -752,7 +799,7 @@ async function doUnassign(uid, cid) {
   }
 }
 
-// ── Analyze with Claude ───────────────────────────────────
+// ââ Analyze with Claude âââââââââââââââââââââââââââââââââââ
 
 async function openClaudeAnalysis() {
   try {
@@ -785,50 +832,52 @@ async function openClaudeAnalysis() {
     }), {spend:0, leads:0, closings:0, commission:0});
 
     const presetLabels = {
-      'last_week_sun_sat':  'Last Week (Sun–Sat)',
-      'this_week_sun_today':'This Week (Sun–Today)',
+      'last_week_sun_sat':  'Last Week (SunâSat)',
+      'this_week_sun_today':'This Week (SunâToday)',
       'this_month':         'This Month',
       'last_month':         'Last Month',
+      'this_year':          'This Year',
+      'custom':             customSince && customUntil ? customSince + ' to ' + customUntil : 'Custom Range',
     };
 
     const lines = enriched.map(c =>
-      `• ${c.campaign_name} [${c.account_label||''}]\n` +
-      `  Spend: RM ${c.spend} | Leads: ${c.leads} | CPL: RM ${c.cpl||'—'} | CPM: RM ${c.cpm||'—'} | CTR: ${c.ctr||'—'}%\n` +
-      `  Closings: ${c.closing_sales||'—'} | Nett Sales: RM ${c.nett_sales||'—'} | Commission: RM ${c.commission||'—'} | ROI: ${c.roi||'—'}x`
+      `â¢ ${c.campaign_name} [${c.account_label||''}]\n` +
+      `  Spend: RM ${c.spend} | Leads: ${c.leads} | CPL: RM ${c.cpl||'â'} | CPM: RM ${c.cpm||'â'} | CTR: ${c.ctr||'â'}%\n` +
+      `  Closings: ${c.closing_sales||'â'} | Nett Sales: RM ${c.nett_sales||'â'} | Commission: RM ${c.commission||'â'} | ROI: ${c.roi||'â'}x`
     ).join('\n\n');
 
-    const prompt = `JPROP REAL ESTATE — META ADS PERFORMANCE REPORT
+    const prompt = `JPROP REAL ESTATE â META ADS PERFORMANCE REPORT
 Period: ${presetLabels[currentPreset] || currentPreset}
 Generated: ${new Date().toLocaleDateString('en-MY', {day:'numeric',month:'long',year:'numeric'})}
 
-═══════════════════════════════════════════
+âââââââââââââââââââââââââââââââââââââââââââ
 CAMPAIGN BREAKDOWN
-═══════════════════════════════════════════
+âââââââââââââââââââââââââââââââââââââââââââ
 ${lines || '(no campaign data)'}
 
-═══════════════════════════════════════════
+âââââââââââââââââââââââââââââââââââââââââââ
 OVERALL TOTALS
-═══════════════════════════════════════════
+âââââââââââââââââââââââââââââââââââââââââââ
 Total Ad Spend:    RM ${totals.spend.toLocaleString()}
 Total Leads:       ${totals.leads}
-Avg CPL:           RM ${totals.leads ? Math.round(totals.spend/totals.leads) : '—'}
-Total Closings:    ${totals.closings || '—'}
+Avg CPL:           RM ${totals.leads ? Math.round(totals.spend/totals.leads) : 'â'}
+Total Closings:    ${totals.closings || 'â'}
 Total Commission:  RM ${totals.commission.toLocaleString()}
-Overall ROI:       ${totals.spend && totals.commission ? Math.round(totals.commission/totals.spend*100)/100 + 'x' : '—'}
+Overall ROI:       ${totals.spend && totals.commission ? Math.round(totals.commission/totals.spend*100)/100 + 'x' : 'â'}
 
-═══════════════════════════════════════════
+âââââââââââââââââââââââââââââââââââââââââââ
 ANALYSIS REQUEST
-═══════════════════════════════════════════
+âââââââââââââââââââââââââââââââââââââââââââ
 Please analyze this META ads data for my real estate business JPROP. I want to know:
 
-1. PERFORMANCE RANKING — Which campaigns deliver the best ROI and lead quality?
-2. SPEND EFFICIENCY — Any campaigns with high spend but poor results? Should I pause or cut budget?
-3. SCALE OPPORTUNITIES — Which campaigns should I increase budget on?
-4. CPL ANALYSIS — Is the cost per lead healthy? Industry benchmark for property leads is RM 30–80.
-5. CONVERSION FUNNEL — Leads to closings ratio — what's the drop-off?
-6. BUDGET RECOMMENDATIONS — Specific reallocation suggestions with numbers.
-7. RED FLAGS — Any urgent concerns?
-8. NEXT WEEK STRATEGY — What should I do differently next week?
+1. PERFORMANCE RANKING â Which campaigns deliver the best ROI and lead quality?
+2. SPEND EFFICIENCY â Any campaigns with high spend but poor results? Should I pause or cut budget?
+3. SCALE OPPORTUNITIES â Which campaigns should I increase budget on?
+4. CPL ANALYSIS â Is the cost per lead healthy? Industry benchmark for property leads is RM 30â80.
+5. CONVERSION FUNNEL â Leads to closings ratio â what's the drop-off?
+6. BUDGET RECOMMENDATIONS â Specific reallocation suggestions with numbers.
+7. RED FLAGS â Any urgent concerns?
+8. NEXT WEEK STRATEGY â What should I do differently next week?
 
 Be specific with numbers. Give direct recommendations.`;
 
@@ -849,9 +898,9 @@ Be specific with numbers. Give direct recommendations.`;
 async function copyClaudePrompt() {
   try {
     await navigator.clipboard.writeText(claudePromptText);
-    showToast('📋 Copied to clipboard!');
+    showToast('ð Copied to clipboard!');
   } catch(e) {
-    showToast('Copy failed — please select and copy manually', 'err');
+    showToast('Copy failed â please select and copy manually', 'err');
   }
 }
 
@@ -864,7 +913,7 @@ document.getElementById('claude-modal').addEventListener('click', function(e) {
   if (e.target === this) closeClaudeModal();
 });
 
-// ── Utility ───────────────────────────────────────────────
+// ââ Utility âââââââââââââââââââââââââââââââââââââââââââââââ
 
 function escHtml(s) {
   return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
