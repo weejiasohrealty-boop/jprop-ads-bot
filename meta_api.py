@@ -159,7 +159,7 @@ async def _fetch_account(session: aiohttp.ClientSession, account: dict, preset: 
     camp_data = camps.get("data", [])
     camp_attrs = {c["id"]: c for c in camp_data}
 
-    # Merge status, updated_time, and computed link_ctr into each insight row
+    # Merge status, updated_time, link_ctr, and inline_link_click_ctr into each insight row
     insight_rows = ins.get("data", [])
     for row in insight_rows:
         cid = row.get("campaign_id")
@@ -168,7 +168,10 @@ async def _fetch_account(session: aiohttp.ClientSession, account: dict, preset: 
             row["updated_time"]     = camp_attrs[cid].get("updated_time", "")
         
         # Explicitly attach link_ctr float field for UI / Dashboard consumption
-        row["link_ctr"] = extract_link_ctr(row)
+        calculated_ctr = extract_link_ctr(row)
+        row["link_ctr"] = calculated_ctr
+        if "inline_link_click_ctr" not in row or row["inline_link_click_ctr"] is None:
+            row["inline_link_click_ctr"] = calculated_ctr
 
     budget_map = parse_budget_map(camp_data, adsets.get("data", []))
 
@@ -208,7 +211,10 @@ async def _fetch_account_adset(session: aiohttp.ClientSession, account: dict, pr
 
     adset_rows = ins.get("data", [])
     for row in adset_rows:
-        row["link_ctr"] = extract_link_ctr(row)
+        calculated_ctr = extract_link_ctr(row)
+        row["link_ctr"] = calculated_ctr
+        if "inline_link_click_ctr" not in row or row["inline_link_click_ctr"] is None:
+            row["inline_link_click_ctr"] = calculated_ctr
 
     adset_budget_map = parse_adset_budget_map(camps.get("data", []), adsets.get("data", []))
 
