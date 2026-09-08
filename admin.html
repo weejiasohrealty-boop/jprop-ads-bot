@@ -805,8 +805,8 @@ function loadOverview() {
     if (prevAcct && accounts.indexOf(prevAcct) >= 0) acctSel.value = prevAcct;
     // Overall KPIs (all data)
     var totals = enrichedCampaigns.reduce(function(acc, c) {
-      // daily_budget from Meta is in cents; divide by 100 for RM
-      var bud = c.daily_budget ? c.daily_budget / 100 : (c.lifetime_budget ? c.lifetime_budget / 100 : 0);
+      // daily_budget is already in RM (backend converts from cents)
+      var bud = c.daily_budget || 0;
       return {
         budget:        acc.budget + bud,
         spend:         acc.spend + (c.spend||0),
