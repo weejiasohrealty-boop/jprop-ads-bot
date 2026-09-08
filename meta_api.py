@@ -38,7 +38,7 @@ LEAD_ACTION_TYPES = {"lead", "offsite_conversion.lead"}
 HOOK_ACTION_TYPES = {"video_view"}
 
 ACCOUNTS = [
-    {"label": "Tony & WJ",              "emoji": "🔵", "id": "act_1751988812183106", "token_key": "TOKEN_TONY"},
+    {"label": "Tony & WJ",              "emoji": "🔵", "id": "act_1751988812183106", "token_key": "TOKEN_JPROP"},
     {"label": "JPROP / Weejia",         "emoji": "🟢", "id": "act_893342706197387",  "token_key": "TOKEN_JPROP"},
     {"label": "Ivan Lee",               "emoji": "🟣", "id": "act_1549466440123865", "token_key": "TOKEN_JPROP"},
     {"label": "Darren",                 "emoji": "🔶", "id": "act_401868168645921",  "token_key": "TOKEN_JPROP"},
@@ -51,6 +51,7 @@ ACCOUNTS = [
     {"label": "Cheng",                  "emoji": "🥎", "id": "act_1000278069552748", "token_key": "TOKEN_JPROP"},
     {"label": "Hannah",                 "emoji": "🔥", "id": "act_1970417923796227", "token_key": "TOKEN_JPROP"},
     {"label": "Jayden",                 "emoji": "🌟", "id": "act_870160215193259",  "token_key": "TOKEN_JPROP"},
+    {"label": "KJ",                 "emoji": "🤖", "id": "act_866285942301565",  "token_key": "TOKEN_JPROP"},
 ]
 
 
