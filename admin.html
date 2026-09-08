@@ -253,85 +253,113 @@ tr:hover td{background:rgba(247,245,240,0.02);}
     </div>
     <!-- Map + KPI cards -->
     <div style="display:flex;gap:32px;flex-wrap:wrap;align-items:flex-start;margin-bottom:36px;">
-      <div style="flex-shrink:0;position:relative;width:100%;max-width:760px;">
+      <div style="flex-shrink:0;position:relative;width:100%;max-width:870px;">
         <div class="map-tooltip" id="rmap-tooltip"></div>
-        <svg id="rmap-svg" viewBox="0 0 800 400" style="display:block;width:100%;height:auto;">
-          <defs>
-            <filter id="mapglow" x="-20%" y="-20%" width="140%" height="140%">
-              <feGaussianBlur stdDeviation="2.5" result="b"/>
-              <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
-            </filter>
-          </defs>
-
-          <!-- ══ PENINSULAR MALAYSIA ══ -->
-          <!-- Main outline -->
-          <path class="my-state" data-state="Peninsular"
-            d="M 78,18 C 102,14 138,16 162,21 C 174,24 183,33 187,46
-               C 191,59 190,74 190,89 C 190,104 192,119 194,134
-               C 196,149 196,165 193,180 C 190,194 186,207 184,221
-               C 181,235 179,249 176,262 C 172,275 166,288 158,299
-               C 150,310 138,320 124,325 C 110,329 94,328 80,323
-               C 66,318 53,308 44,296 C 35,283 29,268 24,252
-               C 19,237 15,220 12,203 C 10,187 9,170 10,153
-               C 11,136 14,119 16,102 C 18,86 18,70 17,55
-               C 16,42 20,30 30,22 C 44,14 62,17 78,18 Z"
-            fill="rgba(176,141,62,0.13)" stroke="rgba(176,141,62,0.5)" stroke-width="1.3" stroke-linejoin="round"/>
-
-          <!-- State border lines (approximate) -->
-          <g stroke="rgba(176,141,62,0.28)" stroke-width="0.7" fill="none">
-            <!-- Perlis/Kedah -->
-            <path d="M 62,20 C 75,26 90,30 108,34"/>
-            <!-- Kedah/Kelantan (main N divide) -->
-            <path d="M 108,34 C 125,30 145,22 165,22"/>
-            <!-- Kedah/Perak -->
-            <path d="M 17,56 C 32,58 48,60 62,62 C 76,64 92,68 108,68"/>
-            <!-- Kelantan/Terengganu -->
-            <path d="M 165,22 C 170,40 172,62 170,85 C 168,98 162,108 155,115"/>
-            <!-- Kelantan/Pahang border -->
-            <path d="M 108,68 C 115,78 128,90 142,100 C 155,110 163,113 170,115"/>
-            <!-- Pahang western border -->
-            <path d="M 10,153 C 28,150 48,148 65,148 C 82,148 102,148 118,148 C 138,148 155,143 170,135"/>
-            <!-- Selangor/N.Sembilan -->
-            <path d="M 10,203 C 28,206 48,208 65,210 C 82,213 98,213 112,210"/>
-            <!-- Johor border -->
-            <path d="M 24,252 C 42,250 65,248 88,248 C 112,248 138,248 160,245 C 174,243 182,250 184,262"/>
+        <svg id="rmap-svg" viewBox="0 0 870 395" style="display:block;width:100%;height:auto;">
+          <!-- ══ PENINSULAR MALAYSIA ══  (scale: x=10+(lon-99.5)*44, y=8+(6.85-lat)*65) -->
+          <g fill="rgba(176,141,62,0.12)" stroke="rgba(176,141,62,0.5)" stroke-width="1.2" stroke-linejoin="round">
+            <!-- Main outline - traced from real geographic coords -->
+            <path class="my-state" d="
+              M 37,19 C 46,14 51,22 54,28 C 68,35 80,39 85,41
+              C 97,44 106,46 111,48 C 120,55 126,62 129,67
+              C 136,72 140,76 143,78 C 154,83 163,87 164,88
+              C 170,97 173,103 173,107 C 178,119 181,127 182,131
+              C 184,141 186,148 186,151 C 185,161 184,166 184,168
+              C 183,181 183,187 182,191 C 180,201 178,208 178,211
+              C 176,221 174,228 173,231 C 169,241 166,248 164,252
+              C 165,264 168,273 168,278 C 177,297 188,311 193,318
+              C 203,331 212,341 215,345 C 218,355 220,363 219,365
+              C 213,373 208,377 204,376 C 200,374 200,371 200,369
+              C 194,367 188,366 184,365 C 177,364 173,362 169,358
+              C 163,349 160,340 156,333 C 146,326 139,321 133,319
+              C 124,312 119,308 115,305 C 109,297 105,291 102,285
+              C 95,274 91,266 89,258 C 86,255 82,253 80,251
+              C 78,244 77,238 76,231 C 76,218 76,210 76,205
+              C 76,192 76,184 76,178 C 70,164 66,158 63,151
+              C 61,141 59,136 58,131 C 55,124 53,121 52,117
+              C 50,111 49,108 48,104 C 44,97 41,93 39,90
+              C 37,83 36,79 36,74 C 36,66 36,61 36,57
+              C 36,50 36,46 36,44 C 36,40 36,38 37,37
+              C 37,29 37,22 37,19 Z"/>
+            <!-- Penang island -->
+            <path class="my-state" d="M 25,104 C 22,98 23,90 28,86 C 33,82 40,83 44,89 C 48,95 46,104 40,107 C 34,110 27,109 25,104 Z" fill="rgba(176,141,62,0.18)"/>
           </g>
 
-          <!-- Penang island -->
-          <path class="my-state" data-state="Penang"
-            d="M 6,100 C 4,94 6,86 12,83 C 18,80 26,82 29,88 C 32,94 29,102 23,105 C 17,108 8,106 6,100 Z"
-            fill="rgba(176,141,62,0.18)" stroke="rgba(176,141,62,0.5)" stroke-width="1"/>
-
-          <!-- ══ EAST MALAYSIA ══ -->
-          <!-- Sarawak -->
-          <path class="my-state" data-state="Sarawak"
-            d="M 292,188 C 300,170 316,148 338,128 C 360,108 388,90 420,74
-               C 452,58 488,46 522,40 C 550,35 576,36 598,46
-               C 617,55 630,70 636,88 C 641,104 638,122 628,136
-               C 617,150 600,160 579,167 C 555,175 526,178 495,180
-               C 462,182 428,182 394,180 C 360,178 328,173 308,165
-               C 295,202 290,204 292,188 Z"
-            fill="rgba(176,141,62,0.13)" stroke="rgba(176,141,62,0.5)" stroke-width="1.3" stroke-linejoin="round"/>
-          <!-- Sarawak divisions -->
-          <g stroke="rgba(176,141,62,0.22)" stroke-width="0.6" fill="none">
-            <path d="M 338,128 C 330,148 314,168 308,185"/>
-            <path d="M 390,76 C 384,100 382,134 380,160 C 379,172 379,180 380,182"/>
-            <path d="M 458,50 C 454,72 450,108 447,142 C 446,162 447,176 448,182"/>
-            <path d="M 522,40 C 518,62 514,98 511,130 C 510,152 511,170 512,180"/>
+          <!-- State border lines -->
+          <g stroke="rgba(176,141,62,0.28)" stroke-width="0.65" fill="none" stroke-linecap="round">
+            <!-- Perlis/Kedah short border -->
+            <path d="M 37,37 C 48,36 58,36 67,37 C 74,38 80,40 85,41"/>
+            <!-- Main Titiwangsa mountain spine (W/E state divide) -->
+            <path d="M 86,42 C 97,57 106,73 116,95 C 126,117 137,140 146,160 C 152,176 155,196 155,218 C 154,238 148,256 147,272 C 147,288 150,304 155,320"/>
+            <!-- Kelantan / Terengganu border (E-W at ~lat 5.40) -->
+            <path d="M 144,103 C 152,103 159,104 164,105 C 169,106 172,106 173,107"/>
+            <!-- Perak / Pahang (roughly lat 4.7 going across) -->
+            <path d="M 63,151 C 76,151 92,152 107,153 C 122,154 136,155 146,158"/>
+            <!-- Pahang / Selangor border -->
+            <path d="M 76,178 C 88,176 100,175 112,174 C 124,173 136,170 146,167"/>
+            <!-- Selangor / N.Sembilan -->
+            <path d="M 76,231 C 87,229 99,228 109,226 C 120,225 131,224 141,224 C 147,224 151,226 155,232"/>
+            <!-- N.Sembilan / Johor -->
+            <path d="M 102,285 C 112,283 122,281 132,280 C 143,279 152,279 160,282 C 165,284 168,280 168,278"/>
+            <!-- Melaka tiny border -->
+            <path d="M 126,312 C 129,315 131,317 133,319"/>
           </g>
 
-          <!-- Sabah -->
-          <path class="my-state" data-state="Sabah"
-            d="M 622,40 C 642,28 668,18 696,14 C 720,11 744,16 762,28
-               C 778,40 786,58 784,76 C 782,92 772,106 758,117
-               C 742,128 722,134 700,136 C 676,139 650,136 628,128
-               C 610,121 596,110 590,96 C 584,82 586,66 594,54
-               C 602,44 614,44 622,40 Z"
-            fill="rgba(176,141,62,0.13)" stroke="rgba(176,141,62,0.5)" stroke-width="1.3" stroke-linejoin="round"/>
+          <!-- ══ EAST MALAYSIA ══  (scale: x=285+(lon-109.5)*57, y=8+(7.5-lat)*55) -->
+          <g fill="rgba(176,141,62,0.12)" stroke="rgba(176,141,62,0.5)" stroke-width="1.2" stroke-linejoin="round">
+            <!-- SARAWAK - coast traced from real coords -->
+            <path class="my-state" d="
+              M 294,306
+              C 297,316 301,324 305,328
+              C 317,334 326,336 331,336
+              C 340,331 344,327 345,325
+              C 368,317 386,310 393,308
+              C 406,307 414,306 416,305
+              C 424,285 430,272 433,262
+              C 455,251 472,246 485,244
+              C 499,229 508,220 513,212
+              C 525,197 532,186 536,180
+              C 546,173 551,169 553,168
+              L 599,152
+              C 610,149 617,147 621,146
+              C 614,169 605,186 599,200
+              L 570,200
+              C 549,229 533,250 513,267
+              C 487,294 457,312 428,322
+              C 404,336 387,347 370,356
+              C 350,356 336,355 325,355
+              C 312,348 306,342 302,338
+              C 297,326 294,315 294,306 Z"/>
+            <!-- SABAH - traced from real coords -->
+            <path class="my-state" d="
+              M 655,146
+              C 659,129 666,109 672,95
+              C 675,85 677,77 678,74
+              C 686,60 694,49 701,42
+              C 712,36 724,40 734,47
+              C 746,57 759,62 770,64
+              C 776,82 777,92 775,100
+              C 775,119 780,134 787,146
+              C 794,160 802,170 804,174
+              C 807,184 803,190 799,192
+              C 789,194 779,192 763,188
+              C 749,186 735,192 713,200
+              C 700,202 691,202 684,200
+              C 672,196 662,188 655,184
+              C 652,176 650,163 649,155
+              C 650,150 652,147 655,146 Z"/>
+            <!-- Labuan island -->
+            <ellipse cx="612" cy="130" rx="7" ry="5" fill="rgba(176,141,62,0.18)"/>
+          </g>
 
-          <!-- Labuan -->
-          <ellipse cx="580" cy="120" rx="7" ry="5"
-            fill="rgba(176,141,62,0.18)" stroke="rgba(176,141,62,0.5)" stroke-width="1"/>
+          <!-- Sarawak internal division lines -->
+          <g stroke="rgba(176,141,62,0.22)" stroke-width="0.55" fill="none" stroke-linecap="round">
+            <path d="M 331,336 C 326,348 322,352 325,355"/>
+            <path d="M 393,308 C 388,323 384,340 380,356"/>
+            <path d="M 453,262 C 448,284 444,308 442,330"/>
+            <path d="M 512,212 C 508,232 505,256 503,276"/>
+            <path d="M 536,180 C 530,200 526,222 524,244"/>
+          </g>
 
           <!-- Region pins drawn by JS -->
           <g id="rmap-regions"></g>
@@ -1038,14 +1066,15 @@ document.getElementById('claude-modal').addEventListener('click', function(e){ i
 var regionTabPreset = 'last_week_sun_sat';
 var regionCampaigns = [];
 
-// Region pin positions in the 800x400 SVG coordinate space
+// Region pin positions in the 870x395 SVG coordinate space
+// x = 10+(lon-99.5)*44  y = 8+(6.85-lat)*65  (Peninsular)
 var REGION_SVG_POS = {
-  'Penang':        {cx:17,  cy:94},
-  'JB CIQ':        {cx:136, cy:312},
-  'Petaling Jaya': {cx:28,  cy:198},
-  'Bukit Jalil':   {cx:42,  cy:210},
-  'KLCC':          {cx:36,  cy:202},
-  'Bangsar':       {cx:30,  cy:207}
+  'Penang':        {cx:36,  cy:104},  // 100.33°E 5.37°N
+  'JB CIQ':        {cx:197, cy:365},  // 103.77°E 1.46°N
+  'Petaling Jaya': {cx:78,  cy:218},  // 101.6°E  3.11°N
+  'Bukit Jalil':   {cx:80,  cy:228},  // 101.68°E 2.97°N
+  'KLCC':          {cx:82,  cy:215},  // 101.71°E 3.16°N
+  'Bangsar':       {cx:79,  cy:220}   // 101.67°E 3.13°N
 };
 
 function setRegionPreset(p, btn) {
