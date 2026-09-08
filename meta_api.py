@@ -9,6 +9,7 @@ import aiohttp
 
 GRAPH_API = "https://graph.facebook.com/v19.0"
 
+# Campaign-level fields — included inline_link_click_ctr for Link CTR
 INSIGHT_FIELDS = ",".join([
     "campaign_id",
     "campaign_name",
@@ -36,6 +37,7 @@ ADSET_INSIGHT_FIELDS = ",".join([
 
 LEAD_ACTION_TYPES = {"lead", "offsite_conversion.lead"}
 HOOK_ACTION_TYPES = {"video_view"}
+LINK_CLICK_ACTION_TYPES = {"inline_link_click", "link_click"}
 
 ACCOUNTS = [
     {"label": "Tony & WJ",              "emoji": "🔵", "id": "act_1751988812183106", "token_key": "TOKEN_JPROP"},
@@ -51,7 +53,7 @@ ACCOUNTS = [
     {"label": "Cheng",                  "emoji": "🥎", "id": "act_1000278069552748", "token_key": "TOKEN_JPROP"},
     {"label": "Hannah",                 "emoji": "🔥", "id": "act_1970417923796227", "token_key": "TOKEN_JPROP"},
     {"label": "Jayden",                 "emoji": "🌟", "id": "act_870160215193259",  "token_key": "TOKEN_JPROP"},
-    {"label": "KJ",                 "emoji": "🤖", "id": "act_866285942301565",  "token_key": "TOKEN_JPROP"},
+    {"label": "KJ",                     "emoji": "🤖", "id": "act_866285942301565",  "token_key": "TOKEN_JPROP"},
 ]
 
 
@@ -64,6 +66,23 @@ def get_token(key: str) -> str:
 
 def get_actions_value(actions: list, types: set) -> float:
     return sum(float(a.get("value", 0)) for a in (actions or []) if a.get("action_type") in types)
+
+
+def extract_link_ctr(row: dict) -> float:
+    """
+    Extracts Link Click CTR (Outbound Link CTR).
+    Uses 'inline_link_click_ctr' if provided by Meta, 
+    otherwise calculates (link_clicks / impressions) * 100.
+    """
+    if "inline_link_click_ctr" in row and row["inline_link_click_ctr"] is not None:
+        return round(float(row["inline_link_click_ctr"]), 2)
+    
+    impressions = float(row.get("impressions", 0))
+    if impressions > 0:
+        link_clicks = get_actions_value(row.get("actions", []), LINK_CLICK_ACTION_TYPES)
+        return round((link_clicks / impressions) * 100, 2)
+        
+    return 0.0
 
 
 def parse_budget_map(camp_data: list, adset_data: list) -> dict:
@@ -140,13 +159,16 @@ async def _fetch_account(session: aiohttp.ClientSession, account: dict, preset: 
     camp_data = camps.get("data", [])
     camp_attrs = {c["id"]: c for c in camp_data}
 
-    # Merge effective_status + updated_time into each insight row
+    # Merge status, updated_time, and computed link_ctr into each insight row
     insight_rows = ins.get("data", [])
     for row in insight_rows:
         cid = row.get("campaign_id")
         if cid and cid in camp_attrs:
             row["effective_status"] = camp_attrs[cid].get("effective_status", "UNKNOWN")
             row["updated_time"]     = camp_attrs[cid].get("updated_time", "")
+        
+        # Explicitly attach link_ctr float field for UI / Dashboard consumption
+        row["link_ctr"] = extract_link_ctr(row)
 
     budget_map = parse_budget_map(camp_data, adsets.get("data", []))
 
@@ -184,26 +206,30 @@ async def _fetch_account_adset(session: aiohttp.ClientSession, account: dict, pr
 
     ins, camps, adsets = await asyncio.gather(insights_task, campaigns_task, adsets_task)
 
+    adset_rows = ins.get("data", [])
+    for row in adset_rows:
+        row["link_ctr"] = extract_link_ctr(row)
+
     adset_budget_map = parse_adset_budget_map(camps.get("data", []), adsets.get("data", []))
 
     return {
         "label":            account["label"],
         "emoji":            account["emoji"],
-        "data":             ins.get("data", []),
+        "data":             adset_rows,
         "adset_budget_map": adset_budget_map,
         "error":            ins.get("error"),
     }
 
 
 async def fetch_all_accounts(preset: str) -> list:
-    """Fetch all accounts at campaign level (for Telegram reports)."""
+    """Fetch all accounts at campaign level (for Telegram reports / Dashboard)."""
     async with aiohttp.ClientSession() as session:
         tasks = [_fetch_account(session, acc, preset) for acc in ACCOUNTS]
         return await asyncio.gather(*tasks)
 
 
 async def fetch_all_accounts_adset(preset: str) -> list:
-    """Fetch all accounts at adset level (for weekly Google Sheets report."""
+    """Fetch all accounts at adset level (for weekly Google Sheets report)."""
     async with aiohttp.ClientSession() as session:
         tasks = [_fetch_account_adset(session, acc, preset) for acc in ACCOUNTS]
         return await asyncio.gather(*tasks)
