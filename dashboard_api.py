@@ -272,6 +272,7 @@ def serve_dashboard():
 def serve_admin():
     return FileResponse(BASE_DIR / "admin.html")
 
-@app.get("/weekly-report")
-async def weekly_report():
-    return FileResponse("weekly-report.html")
+@app.get("/weekly-report", response_class=HTMLResponse)
+def serve_weekly_report():
+    return FileResponse(BASE_DIR / "weekly-report.html")
+    
