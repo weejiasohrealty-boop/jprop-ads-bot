@@ -1125,8 +1125,7 @@ function renderRegionPerfTable() {
   REGIONS.forEach(function(r){ stats[r] = {budget:0, spend:0, leads:0, closings:0, commission:0, cpmSum:0, cpmCount:0, count:0}; });
   regionCampaigns.forEach(function(c) {
     if (c.region && stats[c.region]) {
-      var bud = c.daily_budget ? c.daily_budget/100 : (c.lifetime_budget ? c.lifetime_budget/100 : 0);
-      stats[c.region].budget     += bud;
+      stats[c.region].budget     += c.daily_budget || 0;
       stats[c.region].spend      += c.spend || 0;
       stats[c.region].leads      += c.leads || 0;
       stats[c.region].closings   += c.closing_sales || 0;
