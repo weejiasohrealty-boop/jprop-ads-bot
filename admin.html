@@ -240,25 +240,6 @@ tr:hover td{background:rgba(247,245,240,0.02);}
         </tbody>
       </table>
     </div>
-    <!-- Malaysia Map -->
-    <div class="section-title" style="margin-top:8px;">Regional Performance</div>
-    <div class="map-wrap">
-      <div class="map-svg-box">
-        <div class="map-tooltip" id="map-tooltip"></div>
-        <svg id="malaysia-map" viewBox="0 0 300 530" width="240" height="424" style="display:block;">
-          <!-- Peninsular Malaysia outline -->
-          <path id="my-outline" d="M88,2 L158,8 L173,46 L170,95 L168,155 L176,212 L196,268 L200,322 L196,376 L184,436 L162,516 L148,516 L130,460 L118,408 L108,358 L98,310 L70,272 L42,240 L26,188 L30,140 L46,88 L62,44 Z"
-            fill="rgba(176,141,62,0.06)" stroke="rgba(176,141,62,0.25)" stroke-width="1.5"/>
-          <!-- State borders hint lines -->
-          <line x1="88" y1="2" x2="158" y2="8" stroke="rgba(247,245,240,0.04)" stroke-width="0.5"/>
-          <!-- Region circles rendered by JS -->
-          <g id="map-regions"></g>
-        </svg>
-      </div>
-      <div class="region-table" id="region-table">
-        <div style="color:var(--muted);font-size:12px;padding:20px 0;">Load campaigns to see regional data.</div>
-      </div>
-    </div>
   </div>
 
   <!-- REGION TAB -->
@@ -272,43 +253,87 @@ tr:hover td{background:rgba(247,245,240,0.02);}
     </div>
     <!-- Map + KPI cards -->
     <div style="display:flex;gap:32px;flex-wrap:wrap;align-items:flex-start;margin-bottom:36px;">
-      <div style="flex-shrink:0;position:relative;width:100%;max-width:720px;">
+      <div style="flex-shrink:0;position:relative;width:100%;max-width:760px;">
         <div class="map-tooltip" id="rmap-tooltip"></div>
-        <svg id="rmap-svg" viewBox="0 0 760 340" style="display:block;width:100%;height:auto;">
+        <svg id="rmap-svg" viewBox="0 0 800 400" style="display:block;width:100%;height:auto;">
           <defs>
-            <filter id="glow"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+            <filter id="mapglow" x="-20%" y="-20%" width="140%" height="140%">
+              <feGaussianBlur stdDeviation="2.5" result="b"/>
+              <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
           </defs>
-          <!-- ── Peninsular Malaysia states ── -->
-          <g id="peninsular" stroke="rgba(176,141,62,0.35)" stroke-width="0.8" stroke-linejoin="round">
-            <path id="s-perlis"     class="my-state" data-state="Perlis"     d="M55,5 L85,5 L85,24 L65,27 L55,18 Z"/>
-            <path id="s-kedah"      class="my-state" data-state="Kedah"      d="M28,16 L55,18 L65,27 L85,24 L92,42 L80,67 L58,72 L33,60 L20,46 Z"/>
-            <path id="s-penang"     class="my-state" data-state="Penang"     d="M10,62 L30,56 L36,70 L14,76 Z"/>
-            <path id="s-perak"      class="my-state" data-state="Perak"      d="M20,46 L33,60 L58,72 L80,67 L76,93 L70,122 L47,146 L27,140 L10,116 L8,86 L16,64 Z"/>
-            <path id="s-kelantan"   class="my-state" data-state="Kelantan"   d="M85,24 L145,8 L165,28 L158,83 L115,96 L80,86 L80,67 L92,42 Z"/>
-            <path id="s-terengganu" class="my-state" data-state="Terengganu" d="M165,28 L190,50 L193,120 L176,146 L152,133 L125,116 L115,96 L158,83 Z"/>
-            <path id="s-pahang"     class="my-state" data-state="Pahang"     d="M80,86 L115,96 L125,116 L152,133 L176,146 L180,185 L162,205 L135,215 L110,208 L89,188 L70,178 L66,155 L70,122 L76,93 Z"/>
-            <path id="s-selangor"   class="my-state" data-state="Selangor"   d="M27,140 L47,146 L70,122 L70,178 L58,194 L36,190 L20,168 L16,150 Z"/>
-            <path id="s-nsembilan"  class="my-state" data-state="Negeri Sembilan" d="M36,190 L58,194 L70,178 L89,188 L94,215 L79,228 L58,226 L42,212 Z"/>
-            <path id="s-melaka"     class="my-state" data-state="Melaka"     d="M42,212 L58,226 L63,240 L46,244 L38,228 Z"/>
-            <path id="s-johor"      class="my-state" data-state="Johor"      d="M38,228 L46,244 L63,240 L58,226 L79,228 L94,215 L110,208 L135,215 L162,205 L172,225 L174,265 L158,288 L130,302 L100,306 L74,294 L50,274 L38,250 Z"/>
+
+          <!-- ══ PENINSULAR MALAYSIA ══ -->
+          <!-- Main outline -->
+          <path class="my-state" data-state="Peninsular"
+            d="M 78,18 C 102,14 138,16 162,21 C 174,24 183,33 187,46
+               C 191,59 190,74 190,89 C 190,104 192,119 194,134
+               C 196,149 196,165 193,180 C 190,194 186,207 184,221
+               C 181,235 179,249 176,262 C 172,275 166,288 158,299
+               C 150,310 138,320 124,325 C 110,329 94,328 80,323
+               C 66,318 53,308 44,296 C 35,283 29,268 24,252
+               C 19,237 15,220 12,203 C 10,187 9,170 10,153
+               C 11,136 14,119 16,102 C 18,86 18,70 17,55
+               C 16,42 20,30 30,22 C 44,14 62,17 78,18 Z"
+            fill="rgba(176,141,62,0.13)" stroke="rgba(176,141,62,0.5)" stroke-width="1.3" stroke-linejoin="round"/>
+
+          <!-- State border lines (approximate) -->
+          <g stroke="rgba(176,141,62,0.28)" stroke-width="0.7" fill="none">
+            <!-- Perlis/Kedah -->
+            <path d="M 62,20 C 75,26 90,30 108,34"/>
+            <!-- Kedah/Kelantan (main N divide) -->
+            <path d="M 108,34 C 125,30 145,22 165,22"/>
+            <!-- Kedah/Perak -->
+            <path d="M 17,56 C 32,58 48,60 62,62 C 76,64 92,68 108,68"/>
+            <!-- Kelantan/Terengganu -->
+            <path d="M 165,22 C 170,40 172,62 170,85 C 168,98 162,108 155,115"/>
+            <!-- Kelantan/Pahang border -->
+            <path d="M 108,68 C 115,78 128,90 142,100 C 155,110 163,113 170,115"/>
+            <!-- Pahang western border -->
+            <path d="M 10,153 C 28,150 48,148 65,148 C 82,148 102,148 118,148 C 138,148 155,143 170,135"/>
+            <!-- Selangor/N.Sembilan -->
+            <path d="M 10,203 C 28,206 48,208 65,210 C 82,213 98,213 112,210"/>
+            <!-- Johor border -->
+            <path d="M 24,252 C 42,250 65,248 88,248 C 112,248 138,248 160,245 C 174,243 182,250 184,262"/>
           </g>
-          <!-- ── East Malaysia ── -->
-          <g id="eastmy" stroke="rgba(176,141,62,0.35)" stroke-width="0.8" stroke-linejoin="round">
-            <!-- Sarawak with division lines -->
-            <path id="s-sarawak" class="my-state" data-state="Sarawak"
-              d="M290,95 L345,48 L415,25 L488,14 L536,22 L575,42 L595,78 L585,118 L548,145 L505,158 L455,166 L398,170 L346,167 L308,155 L292,128 Z"/>
-            <!-- Sarawak internal division hints -->
-            <line x1="345" y1="48"  x2="308" y2="155" stroke="rgba(176,141,62,0.2)" stroke-width="0.6"/>
-            <line x1="415" y1="25"  x2="398" y2="170" stroke="rgba(176,141,62,0.2)" stroke-width="0.6"/>
-            <line x1="488" y1="14"  x2="455" y2="166" stroke="rgba(176,141,62,0.2)" stroke-width="0.6"/>
-            <line x1="536" y1="22"  x2="505" y2="158" stroke="rgba(176,141,62,0.2)" stroke-width="0.6"/>
-            <!-- Sabah -->
-            <path id="s-sabah" class="my-state" data-state="Sabah"
-              d="M558,22 L618,12 L678,17 L728,32 L758,52 L760,82 L742,108 L714,128 L682,134 L642,138 L603,126 L576,106 L564,80 L568,52 Z"/>
-            <!-- Labuan (tiny island) -->
-            <circle cx="552" cy="85" r="5" class="my-state" data-state="Labuan"/>
+
+          <!-- Penang island -->
+          <path class="my-state" data-state="Penang"
+            d="M 6,100 C 4,94 6,86 12,83 C 18,80 26,82 29,88 C 32,94 29,102 23,105 C 17,108 8,106 6,100 Z"
+            fill="rgba(176,141,62,0.18)" stroke="rgba(176,141,62,0.5)" stroke-width="1"/>
+
+          <!-- ══ EAST MALAYSIA ══ -->
+          <!-- Sarawak -->
+          <path class="my-state" data-state="Sarawak"
+            d="M 292,188 C 300,170 316,148 338,128 C 360,108 388,90 420,74
+               C 452,58 488,46 522,40 C 550,35 576,36 598,46
+               C 617,55 630,70 636,88 C 641,104 638,122 628,136
+               C 617,150 600,160 579,167 C 555,175 526,178 495,180
+               C 462,182 428,182 394,180 C 360,178 328,173 308,165
+               C 295,202 290,204 292,188 Z"
+            fill="rgba(176,141,62,0.13)" stroke="rgba(176,141,62,0.5)" stroke-width="1.3" stroke-linejoin="round"/>
+          <!-- Sarawak divisions -->
+          <g stroke="rgba(176,141,62,0.22)" stroke-width="0.6" fill="none">
+            <path d="M 338,128 C 330,148 314,168 308,185"/>
+            <path d="M 390,76 C 384,100 382,134 380,160 C 379,172 379,180 380,182"/>
+            <path d="M 458,50 C 454,72 450,108 447,142 C 446,162 447,176 448,182"/>
+            <path d="M 522,40 C 518,62 514,98 511,130 C 510,152 511,170 512,180"/>
           </g>
-          <!-- Region highlight circles drawn by JS -->
+
+          <!-- Sabah -->
+          <path class="my-state" data-state="Sabah"
+            d="M 622,40 C 642,28 668,18 696,14 C 720,11 744,16 762,28
+               C 778,40 786,58 784,76 C 782,92 772,106 758,117
+               C 742,128 722,134 700,136 C 676,139 650,136 628,128
+               C 610,121 596,110 590,96 C 584,82 586,66 594,54
+               C 602,44 614,44 622,40 Z"
+            fill="rgba(176,141,62,0.13)" stroke="rgba(176,141,62,0.5)" stroke-width="1.3" stroke-linejoin="round"/>
+
+          <!-- Labuan -->
+          <ellipse cx="580" cy="120" rx="7" ry="5"
+            fill="rgba(176,141,62,0.18)" stroke="rgba(176,141,62,0.5)" stroke-width="1"/>
+
+          <!-- Region pins drawn by JS -->
           <g id="rmap-regions"></g>
         </svg>
       </div>
@@ -328,13 +353,14 @@ tr:hover td{background:rgba(247,245,240,0.02);}
             <th class="r">Spend</th>
             <th class="r">Leads</th>
             <th class="r">CPL</th>
+            <th class="r">CPM</th>
             <th class="r">Closings</th>
             <th class="r">Commission</th>
             <th class="r">ROI</th>
           </tr>
         </thead>
         <tbody id="region-perf-tbody">
-          <tr><td colspan="8" class="loading">Loading…</td></tr>
+          <tr><td colspan="9" class="loading">Loading…</td></tr>
         </tbody>
       </table>
     </div>
@@ -1012,14 +1038,14 @@ document.getElementById('claude-modal').addEventListener('click', function(e){ i
 var regionTabPreset = 'last_week_sun_sat';
 var regionCampaigns = [];
 
-// Region pin positions in the 760x340 SVG coordinate space
+// Region pin positions in the 800x400 SVG coordinate space
 var REGION_SVG_POS = {
-  'Penang':        {cx:22,  cy:66},
-  'JB CIQ':        {cx:120, cy:285},
-  'Petaling Jaya': {cx:42,  cy:183},
-  'Bukit Jalil':   {cx:52,  cy:196},
-  'KLCC':          {cx:48,  cy:188},
-  'Bangsar':       {cx:44,  cy:192}
+  'Penang':        {cx:17,  cy:94},
+  'JB CIQ':        {cx:136, cy:312},
+  'Petaling Jaya': {cx:28,  cy:198},
+  'Bukit Jalil':   {cx:42,  cy:210},
+  'KLCC':          {cx:36,  cy:202},
+  'Bangsar':       {cx:30,  cy:207}
 };
 
 function setRegionPreset(p, btn) {
@@ -1030,7 +1056,7 @@ function setRegionPreset(p, btn) {
 }
 
 function loadRegionTab() {
-  document.getElementById('region-perf-tbody').innerHTML = '<tr><td colspan="8" class="loading">Loading…</td></tr>';
+  document.getElementById('region-perf-tbody').innerHTML = '<tr><td colspan="9" class="loading">Loading…</td></tr>';
   document.getElementById('region-assign-tbody').innerHTML = '<tr><td colspan="6" class="loading">Loading…</td></tr>';
   Promise.all([
     apiFetch('/api/admin/campaigns?preset=' + regionTabPreset),
@@ -1061,7 +1087,7 @@ function loadRegionTab() {
 function renderRegionPerfTable() {
   // Compute per-region stats
   var stats = {};
-  REGIONS.forEach(function(r){ stats[r] = {spend:0, leads:0, closings:0, commission:0, count:0}; });
+  REGIONS.forEach(function(r){ stats[r] = {spend:0, leads:0, closings:0, commission:0, cpmSum:0, cpmCount:0, count:0}; });
   regionCampaigns.forEach(function(c) {
     if (c.region && stats[c.region]) {
       stats[c.region].spend      += c.spend || 0;
@@ -1069,6 +1095,7 @@ function renderRegionPerfTable() {
       stats[c.region].closings   += c.closing_sales || 0;
       stats[c.region].commission += c.commission || 0;
       stats[c.region].count      += 1;
+      if (c.cpm) { stats[c.region].cpmSum += c.cpm; stats[c.region].cpmCount += 1; }
     }
   });
   // Build KPI cards
@@ -1078,14 +1105,16 @@ function renderRegionPerfTable() {
     var roi = s.spend && s.commission ? Math.round(s.commission/s.spend*100)/100 : 0;
     var col = regionColor(r);
     var roiColor = roi >= 2 ? 'var(--green)' : roi >= 1 ? 'var(--yellow)' : roi > 0 ? 'var(--red)' : 'var(--muted)';
+    var avgCpm = s.cpmCount ? Math.round(s.cpmSum/s.cpmCount*100)/100 : 0;
     return '<div style="background:var(--surface);border:1px solid rgba(176,141,62,0.15);border-left:3px solid '+col+';border-radius:6px;padding:14px 18px;margin-bottom:10px;">' +
       '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">' +
       '<span style="font-size:12px;font-weight:500;color:'+col+';">'+r+'</span>' +
       '<span style="font-size:10px;color:var(--muted);">'+s.count+' campaign'+(s.count!==1?'s':'')+'</span></div>' +
-      '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;">' +
+      '<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;">' +
       kpiMini('Spend', s.spend ? 'RM '+s.spend.toLocaleString() : '—', 'var(--gold)') +
       kpiMini('Leads', s.leads || '—', 'var(--paper)') +
       kpiMini('CPL', cpl ? 'RM '+cpl : '—', 'var(--muted)') +
+      kpiMini('CPM', avgCpm ? 'RM '+avgCpm : '—', 'var(--muted)') +
       kpiMini('ROI', roi ? roi+'x' : '—', roiColor) +
       '</div></div>';
   }).join('');
@@ -1097,12 +1126,14 @@ function renderRegionPerfTable() {
     var s = stats[r];
     var cpl = s.leads ? Math.round(s.spend/s.leads*100)/100 : 0;
     var roi = s.spend && s.commission ? Math.round(s.commission/s.spend*100)/100 : 0;
+    var avgCpm = s.cpmCount ? Math.round(s.cpmSum/s.cpmCount*100)/100 : 0;
     return '<tr>' +
       '<td><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:'+regionColor(r)+';margin-right:8px;vertical-align:middle;"></span>'+r+'</td>' +
       '<td class="r" style="color:var(--muted);">'+s.count+'</td>' +
       '<td class="r gold-val">'+(s.spend?'RM '+s.spend.toLocaleString():'<span style="color:var(--muted)">—</span>')+'</td>' +
       '<td class="r">'+(s.leads||'<span style="color:var(--muted)">—</span>')+'</td>' +
       '<td class="r">'+(cpl?cplBadge(cpl):'<span style="color:var(--muted)">—</span>')+'</td>' +
+      '<td class="r" style="color:var(--muted);">'+(avgCpm?'RM '+avgCpm:'—')+'</td>' +
       '<td class="r">'+(s.closings||'<span style="color:var(--muted)">—</span>')+'</td>' +
       '<td class="r green-val">'+(s.commission?'RM '+s.commission.toLocaleString():'<span style="color:var(--muted)">—</span>')+'</td>' +
       '<td class="r">'+roiBadge(roi)+'</td>' +
