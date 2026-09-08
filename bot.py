@@ -21,11 +21,8 @@ PORT    = int(os.environ.get("PORT", 10000))
 TG      = f"https://api.telegram.org/bot{TOKEN}"
 MAX_LEN = 4000
 
-# ── Morning report config (set in Render environment) ──────────────
-# MORNING_CHAT_ID  : your Telegram chat ID  (send /chatid to the bot to find it)
-# MORNING_HOUR_UTC : hour to fire in UTC    (1 = 9am MYT, 0 = 8am MYT)
 MORNING_CHAT_ID  = int(os.environ.get("MORNING_CHAT_ID", "0"))
-MORNING_HOUR_UTC = int(os.environ.get("MORNING_HOUR_UTC", "1"))   # 1am UTC = 9am MYT
+MORNING_HOUR_UTC = int(os.environ.get("MORNING_HOUR_UTC", "1"))
 
 DATE_LABELS = {
     "today":               "Today",
@@ -35,8 +32,6 @@ DATE_LABELS = {
     "last_week_sun_sat":   "Last Week",
     "last_month":          "Last Month",
 }
-
-# ── Keyboards (raw Telegram inline_keyboard format) ────────────────
 
 MAIN_KBD = [
     [{"text": "📊 All — Today",      "callback_data": "all:today"},
@@ -53,13 +48,12 @@ MAIN_KBD = [
     [{"text": "🔴 Joey",        "callback_data": "pick:4"},
      {"text": "🟡 Am Prop",     "callback_data": "pick:5"}],
     [{"text": "⚪ Janice",      "callback_data": "pick:6"},
-     {"text": "🟤 Pang", "callback_data": "pick:7"}],
-    [{"text": "🟠 Chris",        "callback_data": "pick:8"},
-     {"text": "⛔️ Jet",        "callback_data": "pick:9"}],
+     {"text": "🟤 Pang",        "callback_data": "pick:7"}],
+    [{"text": "🟠 Chris",       "callback_data": "pick:8"},
+     {"text": "⛔️ Jet",         "callback_data": "pick:9"}],
     [{"text": "🥎 Cheng",       "callback_data": "pick:10"},
-     {"text": "🔥 Hannah",       "callback_data": "pick:11"}],
-    [{"text": "🌟 Jayden",       "callback_data": "pick:12"},
-    {"text": "🤖 KJ",       "callback_data": "pick:13"}],
+     {"text": "🔥 Hannah",      "callback_data": "pick:11"}],
+    [{"text": "🌟 Jayden",      "callback_data": "pick:12"}],
     [{"text": "📋 Weekly Report → Sheets", "callback_data": "weekly"}],
 ]
 
@@ -75,8 +69,6 @@ def acc_kbd(i: int) -> list:
         [{"text": "« Back",     "callback_data": "menu"}],
     ]
 
-# ── Signal helpers ─────────────────────────────────────────────────
-
 def _h(t):     return html.escape(str(t))
 def rm(v):     return f"RM{round(v)}"
 def b_cpm(v):  return "🔴" if v > 150 else ("🟡" if v > 80  else "🟢")
@@ -86,7 +78,6 @@ def b_ctr(v):  return "🟢" if v >= 1.0 else ("🟡" if v >= 0.5 else "🔴")
 def b_cpl(v):  return "🟢" if 0 < v <= 50 else ("🟡" if v <= 100 else "🔴")
 
 def _edit_str(iso: str) -> str:
-    """Returns '📅 5 Jun · 8d ago' from an ISO 8601 updated_time string, or ''."""
     if not iso:
         return ""
     try:
@@ -95,8 +86,6 @@ def _edit_str(iso: str) -> str:
         return f" 📅 {dt.strftime('%-d %b')} · {days}d ago"
     except Exception:
         return ""
-
-# ── Campaign formatter ─────────────────────────────────────────────
 
 def fmt_campaign(c: dict, bm: dict) -> str:
     name      = _h(c.get("campaign_name", "Unknown")[:45])
@@ -118,18 +107,13 @@ def fmt_campaign(c: dict, bm: dict) -> str:
     cpl    = spend / leads if leads else 0
     daily  = bm.get(cid, 0)
 
-    # Status badge — only show for campaigns that actually spent
     if spend > 0:
         badge = "🟢" if is_active else "⏸️"
     else:
         badge = "📌"
 
-    # Budget — only for active campaigns
     bud_s  = f" <i>💰{rm(daily)}/day</i>" if (daily > 0 and is_active) else ""
-
-    # Last edit date + days since edit
     edit_s = _edit_str(c.get("updated_time", ""))
-
     lead_s = f"{int(leads)} leads" if leads else "<b>0 leads ⚠️</b>"
     cpl_s  = f" | CPL <b>{rm(cpl)}</b>{b_cpl(cpl)}" if leads else ""
 
@@ -138,8 +122,6 @@ def fmt_campaign(c: dict, bm: dict) -> str:
     line += f"     CPM {rm(cpm)}{b_cpm(cpm)} | Hook {hook_p:.1f}%{b_hook(hook_p)}"
     line += f" | Thru {thru_p:.1f}%{b_thru(thru_p)} | CTR {ctr:.2f}%{b_ctr(ctr)}"
     return line
-
-# ── Report: All accounts ───────────────────────────────────────────
 
 async def build_all(preset: str) -> str:
     results  = await fetch_all_accounts(preset)
@@ -164,7 +146,6 @@ async def build_all(preset: str) -> str:
             parts.append(f"{emoji} <b>{_h(lbl)}</b> — 📭 No data")
             continue
 
-        # Budget header — only sum active campaigns
         acc_budget = sum(
             bm.get(c.get("campaign_id", ""), 0) for c in data
             if c.get("effective_status", "ACTIVE") == "ACTIVE"
@@ -187,21 +168,16 @@ async def build_all(preset: str) -> str:
 
             name  = _h(c.get("campaign_name", "Unknown")[:38])
             ld_s  = f"{int(ld)} leads | CPL {rm(cpl)}{b_cpl(cpl)}" if ld else "0 leads ⚠️"
-            # Status icon — only show if campaign has spent money
             icon  = ("🟢" if is_active else "⏸️") if sp > 0 else "•"
             lines.append(f"  {icon} <b>{name}</b>\n    {rm(sp)} | {ld_s} | CPM {rm(cpm)}{b_cpm(cpm)}")
 
-            # Alert: spent RM100+ but still zero leads
             if sp >= 100 and ld == 0:
                 alerts.append(f"⚠️ <b>{_h(lbl)}</b> — {_h(c.get('campaign_name','')[:25])} {rm(sp)} 0 leads")
-            # Alert: CPL too high
             if ld > 0 and cpl > 50:
                 alerts.append(f"💸 <b>{_h(lbl)}</b> — {_h(c.get('campaign_name','')[:25])} CPL {rm(cpl)}{b_cpl(cpl)}")
-            # Alert: hook rate too low (require 1 000+ impressions to avoid noise)
             if imp >= 1000 and hook_p < 15:
                 alerts.append(f"🎣 <b>{_h(lbl)}</b> — {_h(c.get('campaign_name','')[:25])} Hook {hook_p:.1f}% — fix first 3s")
 
-            # Track best CPL across all accounts
             if ld > 0 and cpl > 0 and (best_cpl is None or cpl < best_cpl):
                 best_cpl       = cpl
                 best_cpl_label = f"{emoji} {lbl} · {c.get('campaign_name','')[:28]}"
@@ -218,15 +194,12 @@ async def build_all(preset: str) -> str:
     parts += [f"{'─'*30}",
               f"📦 <b>GRAND TOTAL</b>\n{bud_t}Spent <b>{rm(gs)}</b> | <b>{int(gl)} leads</b>{cpl_t}"]
 
-    # Best CPL highlight
     if best_cpl is not None:
         parts.append(f"🏆 <b>Best CPL:</b> {rm(best_cpl)} — {_h(best_cpl_label)}")
 
     if alerts:
         parts.append(f"🚨 <b>Alerts ({len(alerts)})</b>\n" + "\n".join(alerts))
     return "\n\n".join(parts)
-
-# ── Report: Single account ─────────────────────────────────────────
 
 async def build_single(idx: int, preset: str) -> str:
     r     = await fetch_single_account(idx, preset)
@@ -265,8 +238,6 @@ async def build_single(idx: int, preset: str) -> str:
         parts.append("🚨 <b>Alerts:</b>\n" + "\n".join(alerts))
     return "\n\n".join(parts)
 
-# ── Telegram API helpers ───────────────────────────────────────────
-
 async def tg(session: ClientSession, method: str, payload: dict) -> dict:
     try:
         async with session.post(
@@ -302,11 +273,8 @@ async def send(session: ClientSession, chat_id: int, text: str, kbd: list = None
             payload.pop("reply_markup", None)
         await tg(session, "sendMessage", payload)
 
-# ── Update handler ─────────────────────────────────────────────────
-
 async def handle(update: dict) -> None:
     async with ClientSession() as session:
-        # Text message
         if "message" in update:
             msg  = update["message"]
             text = msg.get("text", "").strip()
@@ -316,11 +284,9 @@ async def handle(update: dict) -> None:
                            "👋 <b>JPROP Ads Assistant</b>\n\nTap a button to get your report:",
                            MAIN_KBD)
             elif text.startswith("/chatid"):
-                # Use this to find your chat ID for MORNING_CHAT_ID env var
                 await send(session, cid, f"Your chat ID: <code>{cid}</code>")
             return
 
-        # Button press
         if "callback_query" not in update:
             return
 
@@ -348,6 +314,9 @@ async def handle(update: dict) -> None:
 
         elif d.startswith("pick:"):
             idx = int(d.split(":", 1)[1])
+            if idx >= len(ACCOUNTS):
+                await send(session, cid, "❌ Account not found.", MAIN_KBD)
+                return
             a   = ACCOUNTS[idx]
             await send(session, cid,
                        f"{a['emoji']} <b>{_h(a['label'])}</b> — select period:",
@@ -359,8 +328,6 @@ async def handle(update: dict) -> None:
             await send(session, cid,
                        f"⏳ Fetching {ACCOUNTS[idx]['label']} — {DATE_LABELS.get(preset, preset)}…")
             await send(session, cid, await build_single(idx, preset), acc_kbd(idx))
-
-# ── Weekly report ─────────────────────────────────────────────────
 
 async def build_weekly_report(session: ClientSession, cid: int) -> None:
     tab = _tab_name_for_last_week()
@@ -376,7 +343,6 @@ async def build_weekly_report(session: ClientSession, cid: int) -> None:
                    MAIN_KBD)
         return
 
-    # Quick summary in Telegram
     total_sp = total_ld = 0.0
     for r in results:
         for c in (r.get("data") or []):
@@ -399,17 +365,7 @@ async def build_weekly_report(session: ClientSession, cid: int) -> None:
                f"Appt%, Cost/Appt will calculate automatically.",
                MAIN_KBD)
 
-# ── Daily morning report scheduler ────────────────────────────────
-
 async def daily_morning_report():
-    """
-    Fires at MORNING_HOUR_UTC every day and sends yesterday's summary
-    to MORNING_CHAT_ID.
-
-    Setup (Render environment variables):
-        MORNING_CHAT_ID  = <your Telegram chat ID>   ← /chatid to find it
-        MORNING_HOUR_UTC = 1                          ← 1am UTC = 9am MYT
-    """
     if not MORNING_CHAT_ID:
         log.info("MORNING_CHAT_ID not set — daily morning report disabled")
         return
@@ -436,13 +392,10 @@ async def daily_morning_report():
             except Exception as e:
                 log.error(f"Morning report failed: {e}")
 
-# ── Long-polling loop ──────────────────────────────────────────────
-
 async def poll():
     offset = 0
     log.info("Bot polling started")
     async with ClientSession() as session:
-        # Clear pending updates on start
         async with session.get(f"{TG}/getUpdates",
                                params={"offset": -1, "limit": 1},
                                timeout=ClientTimeout(total=10)) as r:
@@ -470,8 +423,6 @@ async def poll():
             log.error(f"Poll error: {e}")
             await asyncio.sleep(5)
 
-# ── Health check + entry point ─────────────────────────────────────
-
 async def health(_): return web.Response(text="OK")
 
 async def run():
@@ -481,7 +432,6 @@ async def run():
     await runner.setup()
     await web.TCPSite(runner, "0.0.0.0", PORT).start()
     log.info(f"Health check on port {PORT}")
-    # Run polling and morning scheduler concurrently
     await asyncio.gather(poll(), daily_morning_report())
 
 if __name__ == "__main__":
