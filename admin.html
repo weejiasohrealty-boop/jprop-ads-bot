@@ -207,6 +207,7 @@ tr:hover td{background:rgba(247,245,240,0.02);}
     </div>
 
     <div class="kpi-row" id="ov-kpis">
+      <div class="kpi"><div class="kpi-label">Daily Budget</div><div class="kpi-value" id="ov-budget">&#8230;</div></div>
       <div class="kpi hi"><div class="kpi-label">Total Spend</div><div class="kpi-value gold" id="ov-spend">&#8230;</div></div>
       <div class="kpi"><div class="kpi-label">Total Leads</div><div class="kpi-value" id="ov-leads">&#8230;</div></div>
       <div class="kpi"><div class="kpi-label">Avg CPL</div><div class="kpi-value" id="ov-cpl">&#8230;</div></div>
@@ -378,6 +379,7 @@ tr:hover td{background:rgba(247,245,240,0.02);}
           <tr>
             <th>Region</th>
             <th class="r">Campaigns</th>
+            <th class="r">Budget/day</th>
             <th class="r">Spend</th>
             <th class="r">Leads</th>
             <th class="r">CPL</th>
@@ -388,7 +390,7 @@ tr:hover td{background:rgba(247,245,240,0.02);}
           </tr>
         </thead>
         <tbody id="region-perf-tbody">
-          <tr><td colspan="9" class="loading">Loading…</td></tr>
+          <tr><td colspan="10" class="loading">Loading…</td></tr>
         </tbody>
       </table>
     </div>
@@ -767,7 +769,7 @@ function renderTable() {
 
 // Overview
 function loadOverview() {
-  ['ov-spend','ov-leads','ov-cpl','ov-closing','ov-commission','ov-roi'].forEach(function(id){
+  ['ov-budget','ov-spend','ov-leads','ov-cpl','ov-closing','ov-commission','ov-roi'].forEach(function(id){
     document.getElementById(id).textContent = '…';
   });
   document.getElementById('ov-tbody').innerHTML = '<tr><td colspan="12" class="loading">Fetching live data…</td></tr>';
@@ -803,15 +805,19 @@ function loadOverview() {
     if (prevAcct && accounts.indexOf(prevAcct) >= 0) acctSel.value = prevAcct;
     // Overall KPIs (all data)
     var totals = enrichedCampaigns.reduce(function(acc, c) {
+      // daily_budget from Meta is in cents; divide by 100 for RM
+      var bud = c.daily_budget ? c.daily_budget / 100 : (c.lifetime_budget ? c.lifetime_budget / 100 : 0);
       return {
+        budget:        acc.budget + bud,
         spend:         acc.spend + (c.spend||0),
         leads:         acc.leads + (c.leads||0),
         closing_sales: acc.closing_sales + (c.closing_sales||0),
         commission:    acc.commission + (c.commission||0)
       };
-    }, {spend:0, leads:0, closing_sales:0, commission:0});
+    }, {budget:0, spend:0, leads:0, closing_sales:0, commission:0});
     totals.cpl = totals.leads ? Math.round(totals.spend / totals.leads * 100) / 100 : 0;
     totals.roi = totals.spend && totals.commission ? Math.round(totals.commission / totals.spend * 100) / 100 : 0;
+    document.getElementById('ov-budget').textContent     = totals.budget ? rm(totals.budget) + '/day' : '-';
     document.getElementById('ov-spend').textContent      = rm(totals.spend);
     document.getElementById('ov-leads').textContent      = totals.leads;
     document.getElementById('ov-cpl').textContent        = totals.cpl ? 'RM ' + totals.cpl : '-';
@@ -1085,7 +1091,7 @@ function setRegionPreset(p, btn) {
 }
 
 function loadRegionTab() {
-  document.getElementById('region-perf-tbody').innerHTML = '<tr><td colspan="9" class="loading">Loading…</td></tr>';
+  document.getElementById('region-perf-tbody').innerHTML = '<tr><td colspan="10" class="loading">Loading…</td></tr>';
   document.getElementById('region-assign-tbody').innerHTML = '<tr><td colspan="6" class="loading">Loading…</td></tr>';
   Promise.all([
     apiFetch('/api/admin/campaigns?preset=' + regionTabPreset),
@@ -1109,16 +1115,18 @@ function loadRegionTab() {
     renderRegionPerfTable();
     renderRegionAssignTable();
   }).catch(function(e){
-    document.getElementById('region-perf-tbody').innerHTML = '<tr><td colspan="8" class="empty">Failed — ' + e.message + '</td></tr>';
+    document.getElementById('region-perf-tbody').innerHTML = '<tr><td colspan="10" class="empty">Failed — ' + e.message + '</td></tr>';
   });
 }
 
 function renderRegionPerfTable() {
   // Compute per-region stats
   var stats = {};
-  REGIONS.forEach(function(r){ stats[r] = {spend:0, leads:0, closings:0, commission:0, cpmSum:0, cpmCount:0, count:0}; });
+  REGIONS.forEach(function(r){ stats[r] = {budget:0, spend:0, leads:0, closings:0, commission:0, cpmSum:0, cpmCount:0, count:0}; });
   regionCampaigns.forEach(function(c) {
     if (c.region && stats[c.region]) {
+      var bud = c.daily_budget ? c.daily_budget/100 : (c.lifetime_budget ? c.lifetime_budget/100 : 0);
+      stats[c.region].budget     += bud;
       stats[c.region].spend      += c.spend || 0;
       stats[c.region].leads      += c.leads || 0;
       stats[c.region].closings   += c.closing_sales || 0;
@@ -1139,7 +1147,8 @@ function renderRegionPerfTable() {
       '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">' +
       '<span style="font-size:12px;font-weight:500;color:'+col+';">'+r+'</span>' +
       '<span style="font-size:10px;color:var(--muted);">'+s.count+' campaign'+(s.count!==1?'s':'')+'</span></div>' +
-      '<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;">' +
+      '<div style="display:grid;grid-template-columns:repeat(6,1fr);gap:8px;">' +
+      kpiMini('Budget/day', s.budget ? 'RM '+Math.round(s.budget) : '—', 'var(--muted)') +
       kpiMini('Spend', s.spend ? 'RM '+s.spend.toLocaleString() : '—', 'var(--gold)') +
       kpiMini('Leads', s.leads || '—', 'var(--paper)') +
       kpiMini('CPL', cpl ? 'RM '+cpl : '—', 'var(--muted)') +
@@ -1159,6 +1168,7 @@ function renderRegionPerfTable() {
     return '<tr>' +
       '<td><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:'+regionColor(r)+';margin-right:8px;vertical-align:middle;"></span>'+r+'</td>' +
       '<td class="r" style="color:var(--muted);">'+s.count+'</td>' +
+      '<td class="r" style="color:var(--muted);">'+(s.budget?'RM '+Math.round(s.budget).toLocaleString():'<span style="color:var(--muted)">—</span>')+'</td>' +
       '<td class="r gold-val">'+(s.spend?'RM '+s.spend.toLocaleString():'<span style="color:var(--muted)">—</span>')+'</td>' +
       '<td class="r">'+(s.leads||'<span style="color:var(--muted)">—</span>')+'</td>' +
       '<td class="r">'+(cpl?cplBadge(cpl):'<span style="color:var(--muted)">—</span>')+'</td>' +
