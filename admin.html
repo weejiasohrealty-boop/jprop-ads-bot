@@ -46,6 +46,9 @@ header{display:flex;align-items:center;justify-content:space-between;padding:18p
 .refresh-btn{background:none;border:1px solid var(--line);color:var(--muted);padding:7px 12px;font-size:12px;border-radius:4px;cursor:pointer;font-family:'Inter',sans-serif;margin-left:auto;transition:all 0.2s;}
 .refresh-btn:hover{color:var(--paper);}
 /* Map */
+.my-state{fill:rgba(176,141,62,0.10);transition:fill 0.2s;}
+.my-state:hover{fill:rgba(176,141,62,0.22);cursor:default;}
+.my-state.has-data{fill:rgba(176,141,62,0.18);}
 .map-wrap{display:flex;gap:32px;flex-wrap:wrap;align-items:flex-start;margin-bottom:40px;}
 .map-svg-box{flex-shrink:0;position:relative;}
 .map-tooltip{position:absolute;background:#111;border:1px solid var(--line);border-radius:6px;padding:10px 14px;font-size:11px;line-height:1.8;pointer-events:none;z-index:10;min-width:160px;display:none;}
@@ -161,6 +164,7 @@ tr:hover td{background:rgba(247,245,240,0.02);}
   </header>
   <div class="tabs">
     <button class="tab-btn active" onclick="switchTab('overview',this)">Overview</button>
+    <button class="tab-btn" onclick="switchTab('region',this)">Region</button>
     <button class="tab-btn" onclick="switchTab('profit',this)">Profit Entry</button>
     <button class="tab-btn" onclick="switchTab('investors',this)">Investors</button>
     <button class="tab-btn" onclick="switchTab('assign',this)">Assignments</button>
@@ -254,6 +258,105 @@ tr:hover td{background:rgba(247,245,240,0.02);}
       <div class="region-table" id="region-table">
         <div style="color:var(--muted);font-size:12px;padding:20px 0;">Load campaigns to see regional data.</div>
       </div>
+    </div>
+  </div>
+
+  <!-- REGION TAB -->
+  <div id="tab-region" class="tab-panel">
+    <div class="preset-bar">
+      <button class="preset-btn active" onclick="setRegionPreset('last_week_sun_sat',this)">Last Week</button>
+      <button class="preset-btn" onclick="setRegionPreset('this_week_sun_today',this)">This Week</button>
+      <button class="preset-btn" onclick="setRegionPreset('this_month',this)">This Month</button>
+      <button class="preset-btn" onclick="setRegionPreset('last_month',this)">Last Month</button>
+      <button class="refresh-btn" onclick="loadRegionTab()">&#8635; Refresh</button>
+    </div>
+    <!-- Map + KPI cards -->
+    <div style="display:flex;gap:32px;flex-wrap:wrap;align-items:flex-start;margin-bottom:36px;">
+      <div style="flex-shrink:0;position:relative;width:100%;max-width:720px;">
+        <div class="map-tooltip" id="rmap-tooltip"></div>
+        <svg id="rmap-svg" viewBox="0 0 760 340" style="display:block;width:100%;height:auto;">
+          <defs>
+            <filter id="glow"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+          </defs>
+          <!-- ── Peninsular Malaysia states ── -->
+          <g id="peninsular" stroke="rgba(176,141,62,0.35)" stroke-width="0.8" stroke-linejoin="round">
+            <path id="s-perlis"     class="my-state" data-state="Perlis"     d="M55,5 L85,5 L85,24 L65,27 L55,18 Z"/>
+            <path id="s-kedah"      class="my-state" data-state="Kedah"      d="M28,16 L55,18 L65,27 L85,24 L92,42 L80,67 L58,72 L33,60 L20,46 Z"/>
+            <path id="s-penang"     class="my-state" data-state="Penang"     d="M10,62 L30,56 L36,70 L14,76 Z"/>
+            <path id="s-perak"      class="my-state" data-state="Perak"      d="M20,46 L33,60 L58,72 L80,67 L76,93 L70,122 L47,146 L27,140 L10,116 L8,86 L16,64 Z"/>
+            <path id="s-kelantan"   class="my-state" data-state="Kelantan"   d="M85,24 L145,8 L165,28 L158,83 L115,96 L80,86 L80,67 L92,42 Z"/>
+            <path id="s-terengganu" class="my-state" data-state="Terengganu" d="M165,28 L190,50 L193,120 L176,146 L152,133 L125,116 L115,96 L158,83 Z"/>
+            <path id="s-pahang"     class="my-state" data-state="Pahang"     d="M80,86 L115,96 L125,116 L152,133 L176,146 L180,185 L162,205 L135,215 L110,208 L89,188 L70,178 L66,155 L70,122 L76,93 Z"/>
+            <path id="s-selangor"   class="my-state" data-state="Selangor"   d="M27,140 L47,146 L70,122 L70,178 L58,194 L36,190 L20,168 L16,150 Z"/>
+            <path id="s-nsembilan"  class="my-state" data-state="Negeri Sembilan" d="M36,190 L58,194 L70,178 L89,188 L94,215 L79,228 L58,226 L42,212 Z"/>
+            <path id="s-melaka"     class="my-state" data-state="Melaka"     d="M42,212 L58,226 L63,240 L46,244 L38,228 Z"/>
+            <path id="s-johor"      class="my-state" data-state="Johor"      d="M38,228 L46,244 L63,240 L58,226 L79,228 L94,215 L110,208 L135,215 L162,205 L172,225 L174,265 L158,288 L130,302 L100,306 L74,294 L50,274 L38,250 Z"/>
+          </g>
+          <!-- ── East Malaysia ── -->
+          <g id="eastmy" stroke="rgba(176,141,62,0.35)" stroke-width="0.8" stroke-linejoin="round">
+            <!-- Sarawak with division lines -->
+            <path id="s-sarawak" class="my-state" data-state="Sarawak"
+              d="M290,95 L345,48 L415,25 L488,14 L536,22 L575,42 L595,78 L585,118 L548,145 L505,158 L455,166 L398,170 L346,167 L308,155 L292,128 Z"/>
+            <!-- Sarawak internal division hints -->
+            <line x1="345" y1="48"  x2="308" y2="155" stroke="rgba(176,141,62,0.2)" stroke-width="0.6"/>
+            <line x1="415" y1="25"  x2="398" y2="170" stroke="rgba(176,141,62,0.2)" stroke-width="0.6"/>
+            <line x1="488" y1="14"  x2="455" y2="166" stroke="rgba(176,141,62,0.2)" stroke-width="0.6"/>
+            <line x1="536" y1="22"  x2="505" y2="158" stroke="rgba(176,141,62,0.2)" stroke-width="0.6"/>
+            <!-- Sabah -->
+            <path id="s-sabah" class="my-state" data-state="Sabah"
+              d="M558,22 L618,12 L678,17 L728,32 L758,52 L760,82 L742,108 L714,128 L682,134 L642,138 L603,126 L576,106 L564,80 L568,52 Z"/>
+            <!-- Labuan (tiny island) -->
+            <circle cx="552" cy="85" r="5" class="my-state" data-state="Labuan"/>
+          </g>
+          <!-- Region highlight circles drawn by JS -->
+          <g id="rmap-regions"></g>
+        </svg>
+      </div>
+      <!-- Region KPI cards -->
+      <div style="flex:1;min-width:260px;" id="region-kpi-cards">
+        <div style="color:var(--muted);font-size:12px;padding:20px 0;">Loading…</div>
+      </div>
+    </div>
+    <!-- Region performance table -->
+    <div class="section-title">Performance by Region</div>
+    <div class="table-wrap" style="margin-bottom:40px;">
+      <table>
+        <thead>
+          <tr>
+            <th>Region</th>
+            <th class="r">Campaigns</th>
+            <th class="r">Spend</th>
+            <th class="r">Leads</th>
+            <th class="r">CPL</th>
+            <th class="r">Closings</th>
+            <th class="r">Commission</th>
+            <th class="r">ROI</th>
+          </tr>
+        </thead>
+        <tbody id="region-perf-tbody">
+          <tr><td colspan="8" class="loading">Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <!-- Assign campaigns to region -->
+    <div class="section-title">Assign Campaigns to Region</div>
+    <div class="section-subtitle">Changes save instantly.</div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Campaign</th>
+            <th>Account</th>
+            <th class="r">Spend</th>
+            <th class="r">Leads</th>
+            <th class="r">CPL</th>
+            <th style="width:160px;">Region</th>
+          </tr>
+        </thead>
+        <tbody id="region-assign-tbody">
+          <tr><td colspan="6" class="loading">Loading…</td></tr>
+        </tbody>
+      </table>
     </div>
   </div>
 
@@ -458,6 +561,7 @@ function switchTab(name, btn) {
   document.querySelectorAll('.tab-btn').forEach(function(b){ b.classList.remove('active'); });
   document.getElementById('tab-' + name).classList.add('active');
   btn.classList.add('active');
+  if (name === 'region')    loadRegionTab();
   if (name === 'profit')    loadProfitTab();
   if (name === 'investors') loadInvestors();
   if (name === 'assign')    loadAssignTab();
@@ -903,6 +1007,214 @@ function copyClaudePrompt() {
 }
 function closeClaudeModal() { document.getElementById('claude-modal').classList.remove('show'); }
 document.getElementById('claude-modal').addEventListener('click', function(e){ if(e.target===this) closeClaudeModal(); });
+
+// ── Region Tab ──
+var regionTabPreset = 'last_week_sun_sat';
+var regionCampaigns = [];
+
+// Region pin positions in the 760x340 SVG coordinate space
+var REGION_SVG_POS = {
+  'Penang':        {cx:22,  cy:66},
+  'JB CIQ':        {cx:120, cy:285},
+  'Petaling Jaya': {cx:42,  cy:183},
+  'Bukit Jalil':   {cx:52,  cy:196},
+  'KLCC':          {cx:48,  cy:188},
+  'Bangsar':       {cx:44,  cy:192}
+};
+
+function setRegionPreset(p, btn) {
+  regionTabPreset = p;
+  document.querySelectorAll('#tab-region .preset-btn').forEach(function(b){ b.classList.remove('active'); });
+  btn.classList.add('active');
+  loadRegionTab();
+}
+
+function loadRegionTab() {
+  document.getElementById('region-perf-tbody').innerHTML = '<tr><td colspan="8" class="loading">Loading…</td></tr>';
+  document.getElementById('region-assign-tbody').innerHTML = '<tr><td colspan="6" class="loading">Loading…</td></tr>';
+  Promise.all([
+    apiFetch('/api/admin/campaigns?preset=' + regionTabPreset),
+    apiFetch('/api/admin/profits')
+  ]).then(function(res) {
+    var camps = res[0], profits = res[1];
+    var profitMap = {};
+    profits.forEach(function(p){ profitMap[p.campaign_id] = p; });
+    // Enrich with profit + region
+    regionCampaigns = camps.filter(function(c){ return (c.spend||0) > 0; }).map(function(c) {
+      var p = profitMap[c.campaign_id] || {};
+      var sp = c.spend || 0, co = p.commission || 0;
+      return Object.assign({}, c, {
+        closing_sales: p.closing_sales || 0,
+        commission: co,
+        roi: sp && co ? Math.round(co/sp*100)/100 : 0,
+        region: regionMap[c.campaign_id] || ''
+      });
+    });
+    renderRegionMap();
+    renderRegionPerfTable();
+    renderRegionAssignTable();
+  }).catch(function(e){
+    document.getElementById('region-perf-tbody').innerHTML = '<tr><td colspan="8" class="empty">Failed — ' + e.message + '</td></tr>';
+  });
+}
+
+function renderRegionPerfTable() {
+  // Compute per-region stats
+  var stats = {};
+  REGIONS.forEach(function(r){ stats[r] = {spend:0, leads:0, closings:0, commission:0, count:0}; });
+  regionCampaigns.forEach(function(c) {
+    if (c.region && stats[c.region]) {
+      stats[c.region].spend      += c.spend || 0;
+      stats[c.region].leads      += c.leads || 0;
+      stats[c.region].closings   += c.closing_sales || 0;
+      stats[c.region].commission += c.commission || 0;
+      stats[c.region].count      += 1;
+    }
+  });
+  // Build KPI cards
+  var cards = REGIONS.map(function(r) {
+    var s = stats[r];
+    var cpl = s.leads ? Math.round(s.spend/s.leads*100)/100 : 0;
+    var roi = s.spend && s.commission ? Math.round(s.commission/s.spend*100)/100 : 0;
+    var col = regionColor(r);
+    var roiColor = roi >= 2 ? 'var(--green)' : roi >= 1 ? 'var(--yellow)' : roi > 0 ? 'var(--red)' : 'var(--muted)';
+    return '<div style="background:var(--surface);border:1px solid rgba(176,141,62,0.15);border-left:3px solid '+col+';border-radius:6px;padding:14px 18px;margin-bottom:10px;">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">' +
+      '<span style="font-size:12px;font-weight:500;color:'+col+';">'+r+'</span>' +
+      '<span style="font-size:10px;color:var(--muted);">'+s.count+' campaign'+(s.count!==1?'s':'')+'</span></div>' +
+      '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;">' +
+      kpiMini('Spend', s.spend ? 'RM '+s.spend.toLocaleString() : '—', 'var(--gold)') +
+      kpiMini('Leads', s.leads || '—', 'var(--paper)') +
+      kpiMini('CPL', cpl ? 'RM '+cpl : '—', 'var(--muted)') +
+      kpiMini('ROI', roi ? roi+'x' : '—', roiColor) +
+      '</div></div>';
+  }).join('');
+  var kpiEl = document.getElementById('region-kpi-cards');
+  if (kpiEl) kpiEl.innerHTML = cards;
+
+  // Table
+  var rows = REGIONS.map(function(r) {
+    var s = stats[r];
+    var cpl = s.leads ? Math.round(s.spend/s.leads*100)/100 : 0;
+    var roi = s.spend && s.commission ? Math.round(s.commission/s.spend*100)/100 : 0;
+    return '<tr>' +
+      '<td><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:'+regionColor(r)+';margin-right:8px;vertical-align:middle;"></span>'+r+'</td>' +
+      '<td class="r" style="color:var(--muted);">'+s.count+'</td>' +
+      '<td class="r gold-val">'+(s.spend?'RM '+s.spend.toLocaleString():'<span style="color:var(--muted)">—</span>')+'</td>' +
+      '<td class="r">'+(s.leads||'<span style="color:var(--muted)">—</span>')+'</td>' +
+      '<td class="r">'+(cpl?cplBadge(cpl):'<span style="color:var(--muted)">—</span>')+'</td>' +
+      '<td class="r">'+(s.closings||'<span style="color:var(--muted)">—</span>')+'</td>' +
+      '<td class="r green-val">'+(s.commission?'RM '+s.commission.toLocaleString():'<span style="color:var(--muted)">—</span>')+'</td>' +
+      '<td class="r">'+roiBadge(roi)+'</td>' +
+      '</tr>';
+  }).join('');
+  document.getElementById('region-perf-tbody').innerHTML = rows;
+}
+
+function kpiMini(label, val, color) {
+  return '<div><div style="font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:3px;">'+label+'</div>' +
+    '<div style="font-size:13px;color:'+color+';">'+val+'</div></div>';
+}
+
+function renderRegionAssignTable() {
+  if (!regionCampaigns.length) {
+    document.getElementById('region-assign-tbody').innerHTML = '<tr><td colspan="6" class="empty">No campaigns with spend</td></tr>';
+    return;
+  }
+  var rows = regionCampaigns.map(function(c) {
+    var rowId = 'ra-' + c.campaign_id.replace(/[^a-z0-9]/gi,'_');
+    var opts = '<option value="">— None —</option>' +
+      REGIONS.map(function(r){ return '<option value="'+r+'"'+(regionMap[c.campaign_id]===r?' selected':'')+'>'+r+'</option>'; }).join('');
+    return '<tr>' +
+      '<td><div class="camp-name">'+escHtml(c.campaign_name)+'</div></td>' +
+      '<td style="color:var(--muted);font-size:11px;">'+escHtml(c.account_label||'')+'</td>' +
+      '<td class="r gold-val">RM '+c.spend+'</td>' +
+      '<td class="r">'+(c.leads?c.leads:'<span style="color:var(--muted)">—</span>')+'</td>' +
+      '<td class="r">'+(c.cpl?cplBadge(c.cpl):'<span style="color:var(--muted)">—</span>')+'</td>' +
+      '<td><select id="'+rowId+'" onchange="assignRegion(\''+escAttr(c.campaign_id)+'\',this.value)" style="padding:5px 8px;font-size:11px;border-radius:4px;">'+opts+'</select></td>' +
+      '</tr>';
+  }).join('');
+  document.getElementById('region-assign-tbody').innerHTML = rows;
+}
+
+function assignRegion(cid, region) {
+  if (region) { regionMap[cid] = region; } else { delete regionMap[cid]; }
+  localStorage.setItem('jprop_regions', JSON.stringify(regionMap));
+  // Update enrichedCampaigns too so overview map stays in sync
+  enrichedCampaigns.forEach(function(c){ if(c.campaign_id===cid) c.region=region; });
+  renderRegionMap();
+  renderRegionPerfTable();
+  showToast('Region saved');
+}
+
+function renderRegionMap() {
+  var svgG = document.getElementById('rmap-regions');
+  if (!svgG) return;
+  svgG.innerHTML = '';
+  // Compute stats from regionCampaigns (or enrichedCampaigns if region tab not loaded)
+  var src = regionCampaigns.length ? regionCampaigns : enrichedCampaigns;
+  var stats = {};
+  REGIONS.forEach(function(r){ stats[r] = {spend:0, leads:0, closings:0, commission:0, count:0}; });
+  src.forEach(function(c) {
+    if (c.region && stats[c.region]) {
+      stats[c.region].spend      += c.spend || 0;
+      stats[c.region].leads      += c.leads || 0;
+      stats[c.region].closings   += c.closing_sales || 0;
+      stats[c.region].commission += c.commission || 0;
+      stats[c.region].count      += 1;
+    }
+  });
+  var maxSpend = 1;
+  REGIONS.forEach(function(r){ if(stats[r].spend > maxSpend) maxSpend = stats[r].spend; });
+
+  REGIONS.forEach(function(r) {
+    var s = stats[r];
+    var pos = REGION_SVG_POS[r];
+    if (!pos) return;
+    var radius = s.spend > 0 ? Math.max(9, Math.round(24 * Math.sqrt(s.spend/maxSpend))) : 5;
+    var roi = s.spend && s.commission ? s.commission/s.spend : 0;
+    var fill = s.spend === 0 ? 'rgba(247,245,240,0.06)' :
+               roi >= 2 ? 'rgba(76,175,130,0.5)' :
+               roi >= 1 ? 'rgba(224,183,85,0.5)' : 'rgba(224,85,85,0.45)';
+    var stroke = regionColor(r);
+
+    // Outer glow ring
+    var glow = document.createElementNS('http://www.w3.org/2000/svg','circle');
+    glow.setAttribute('cx', pos.cx); glow.setAttribute('cy', pos.cy);
+    glow.setAttribute('r', radius+4);
+    glow.setAttribute('fill', 'none');
+    glow.setAttribute('stroke', stroke);
+    glow.setAttribute('stroke-width', '1');
+    glow.setAttribute('opacity', '0.3');
+    svgG.appendChild(glow);
+
+    // Main circle
+    var c2 = document.createElementNS('http://www.w3.org/2000/svg','circle');
+    c2.setAttribute('cx', pos.cx); c2.setAttribute('cy', pos.cy); c2.setAttribute('r', radius);
+    c2.setAttribute('fill', fill); c2.setAttribute('stroke', stroke); c2.setAttribute('stroke-width', '1.5');
+    c2.style.cursor = 'default';
+    // Tooltip
+    c2.addEventListener('mouseenter', function() {
+      var tip = document.getElementById('rmap-tooltip');
+      var roi2 = s.spend && s.commission ? Math.round(s.commission/s.spend*100)/100 : 0;
+      var cpl2 = s.leads ? Math.round(s.spend/s.leads*100)/100 : 0;
+      tip.innerHTML = '<b>'+r+'</b><br>Spend: RM '+(s.spend?s.spend.toLocaleString():'—')+'<br>Leads: '+(s.leads||'—')+'<br>CPL: '+(cpl2?'RM '+cpl2:'—')+'<br>Closings: '+(s.closings||'—')+'<br>ROI: '+(roi2?roi2+'x':'—');
+      tip.style.display = 'block';
+      tip.style.left = (pos.cx + 18) + 'px';
+      tip.style.top  = Math.max(0, pos.cy - 20) + 'px';
+    });
+    c2.addEventListener('mouseleave', function(){ document.getElementById('rmap-tooltip').style.display='none'; });
+    svgG.appendChild(c2);
+
+    // Label
+    var lbl = document.createElementNS('http://www.w3.org/2000/svg','text');
+    lbl.setAttribute('x', pos.cx); lbl.setAttribute('y', pos.cy + radius + 10);
+    lbl.setAttribute('text-anchor','middle'); lbl.setAttribute('fill', stroke);
+    lbl.setAttribute('font-size','7'); lbl.setAttribute('font-family','Inter,sans-serif');
+    lbl.textContent = r;
+    svgG.appendChild(lbl);
+  });
+}
 
 // Region helpers
 function regionColor(region) {
