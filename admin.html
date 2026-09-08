@@ -45,6 +45,17 @@ header{display:flex;align-items:center;justify-content:space-between;padding:18p
 .preset-btn.active{border-color:var(--gold);color:var(--gold);}
 .refresh-btn{background:none;border:1px solid var(--line);color:var(--muted);padding:7px 12px;font-size:12px;border-radius:4px;cursor:pointer;font-family:'Inter',sans-serif;margin-left:auto;transition:all 0.2s;}
 .refresh-btn:hover{color:var(--paper);}
+/* Map */
+.map-wrap{display:flex;gap:32px;flex-wrap:wrap;align-items:flex-start;margin-bottom:40px;}
+.map-svg-box{flex-shrink:0;position:relative;}
+.map-tooltip{position:absolute;background:#111;border:1px solid var(--line);border-radius:6px;padding:10px 14px;font-size:11px;line-height:1.8;pointer-events:none;z-index:10;min-width:160px;display:none;}
+.map-tooltip b{color:var(--gold);}
+.region-table{flex:1;min-width:220px;}
+.region-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--line);gap:12px;font-size:12px;}
+.region-row:last-child{border-bottom:none;}
+.region-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+.region-name{flex:1;font-size:12px;}
+.region-kpis{text-align:right;font-size:11px;color:var(--muted);}
 /* Filter bar */
 .filter-bar{display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;align-items:center;}
 .filter-btn{background:none;border:1px solid var(--line);color:var(--muted);padding:5px 11px;font-size:10px;letter-spacing:0.08em;text-transform:uppercase;border-radius:4px;cursor:pointer;font-family:'Inter',sans-serif;transition:all 0.2s;}
@@ -207,6 +218,7 @@ tr:hover td{background:rgba(247,245,240,0.02);}
           <tr>
             <th data-sort="campaign_name" onclick="sortBy('campaign_name')">Campaign <span class="sort-arrow">&#8597;</span></th>
             <th data-sort="account_label" onclick="sortBy('account_label')">Account <span class="sort-arrow">&#8597;</span></th>
+            <th data-sort="region" onclick="sortBy('region')">Region <span class="sort-arrow">&#8597;</span></th>
             <th>Status</th>
             <th class="r" data-sort="spend" onclick="sortBy('spend')">Spend <span class="sort-arrow">&#8597;</span></th>
             <th class="r" data-sort="leads" onclick="sortBy('leads')">Leads <span class="sort-arrow">&#8597;</span></th>
@@ -220,9 +232,28 @@ tr:hover td{background:rgba(247,245,240,0.02);}
           </tr>
         </thead>
         <tbody id="ov-tbody">
-          <tr><td colspan="12" class="loading">Loading campaigns&#8230;</td></tr>
+          <tr><td colspan="13" class="loading">Loading campaigns&#8230;</td></tr>
         </tbody>
       </table>
+    </div>
+    <!-- Malaysia Map -->
+    <div class="section-title" style="margin-top:8px;">Regional Performance</div>
+    <div class="map-wrap">
+      <div class="map-svg-box">
+        <div class="map-tooltip" id="map-tooltip"></div>
+        <svg id="malaysia-map" viewBox="0 0 300 530" width="240" height="424" style="display:block;">
+          <!-- Peninsular Malaysia outline -->
+          <path id="my-outline" d="M88,2 L158,8 L173,46 L170,95 L168,155 L176,212 L196,268 L200,322 L196,376 L184,436 L162,516 L148,516 L130,460 L118,408 L108,358 L98,310 L70,272 L42,240 L26,188 L30,140 L46,88 L62,44 Z"
+            fill="rgba(176,141,62,0.06)" stroke="rgba(176,141,62,0.25)" stroke-width="1.5"/>
+          <!-- State borders hint lines -->
+          <line x1="88" y1="2" x2="158" y2="8" stroke="rgba(247,245,240,0.04)" stroke-width="0.5"/>
+          <!-- Region circles rendered by JS -->
+          <g id="map-regions"></g>
+        </svg>
+      </div>
+      <div class="region-table" id="region-table">
+        <div style="color:var(--muted);font-size:12px;padding:20px 0;">Load campaigns to see regional data.</div>
+      </div>
     </div>
   </div>
 
@@ -330,6 +361,17 @@ let currentStatusFilter  = 'all';
 let currentAccountFilter = '';
 let currentSortCol  = null;
 let currentSortDir  = 'desc';
+// Region
+const REGIONS = ['Penang','JB CIQ','Petaling Jaya','Bukit Jalil','KLCC','Bangsar'];
+const REGION_POS = {
+  'Penang':        {cx:50,  cy:90},
+  'JB CIQ':        {cx:152, cy:508},
+  'Petaling Jaya': {cx:88,  cy:302},
+  'Bukit Jalil':   {cx:118, cy:332},
+  'KLCC':          {cx:112, cy:308},
+  'Bangsar':       {cx:100, cy:320}
+};
+let regionMap = JSON.parse(localStorage.getItem('jprop_regions') || '{}');
 
 function rm(v) {
   return 'RM ' + Number(v).toLocaleString('en-MY', {minimumFractionDigits:0, maximumFractionDigits:0});
@@ -492,7 +534,8 @@ function updateSortHeaders() {
 
 // Render table applying filters and sort
 function renderTable() {
-  var data = enrichedCampaigns.slice();
+  // Only show campaigns with actual spend
+  var data = enrichedCampaigns.filter(function(c){ return (c.spend || 0) > 0; });
   // Status filter
   if (currentStatusFilter !== 'all') {
     data = data.filter(function(c){ return (c.effective_status || 'ACTIVE') === currentStatusFilter; });
@@ -517,17 +560,20 @@ function renderTable() {
   var countEl = document.getElementById('result-count');
   if (countEl) countEl.textContent = data.length + ' campaign' + (data.length !== 1 ? 's' : '');
   if (!data.length) {
-    document.getElementById('ov-tbody').innerHTML = '<tr><td colspan="12" class="empty">No campaigns match filters</td></tr>';
+    document.getElementById('ov-tbody').innerHTML = '<tr><td colspan="13" class="empty">No campaigns match filters</td></tr>';
     return;
   }
   // Rows
   var rows = data.map(function(c) {
+    var rgn = c.region || '';
+    var rgnDot = rgn ? '<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:'+regionColor(rgn)+';margin-right:5px;vertical-align:middle;"></span>' : '';
     return '<tr>' +
       '<td><div class="camp-name">' + escHtml(c.campaign_name) + '</div></td>' +
       '<td style="color:var(--muted);font-size:11px;">' + escHtml(c.account_label||'') + '</td>' +
+      '<td style="font-size:11px;white-space:nowrap;">' + (rgn ? rgnDot + escHtml(rgn) : '<span style="color:var(--muted)">—</span>') + '</td>' +
       '<td>' + statusBadge(c.effective_status) + '</td>' +
       '<td class="r gold-val">' + rm(c.spend) + '</td>' +
-      '<td class="r">' + (c.leads || '&mdash;') + '</td>' +
+      '<td class="r">' + (c.leads ? c.leads : '<span title="Spending with no leads!">⚠️</span>') + '</td>' +
       '<td class="r">' + cplBadge(c.cpl) + '</td>' +
       '<td class="r" style="color:var(--muted);">' + (c.cpm ? 'RM '+c.cpm : '&mdash;') + '</td>' +
       '<td class="r" style="color:var(--muted);">' + (c.hook_pct ? c.hook_pct+'%' : '&mdash;') + '</td>' +
@@ -549,7 +595,7 @@ function renderTable() {
   totals.cpl = totals.leads ? Math.round(totals.spend / totals.leads * 100) / 100 : 0;
   totals.roi = totals.spend && totals.commission ? Math.round(totals.commission / totals.spend * 100) / 100 : 0;
   var totalRow = '<tr class="total-row">' +
-    '<td><b>TOTAL</b></td><td>&mdash;</td><td>&mdash;</td>' +
+    '<td><b>TOTAL</b></td><td>&mdash;</td><td>&mdash;</td><td>&mdash;</td>' +
     '<td class="r"><b>' + rm(totals.spend) + '</b></td>' +
     '<td class="r"><b>' + totals.leads + '</b></td>' +
     '<td class="r">' + (totals.cpl ? 'RM '+totals.cpl : '&mdash;') + '</td>' +
@@ -584,7 +630,8 @@ function loadOverview() {
         closing_sales: p.closing_sales || 0,
         nett_sales:    p.nett_sales || 0,
         commission:    co,
-        roi:           sp && co ? Math.round(co / sp * 100) / 100 : 0
+        roi:           sp && co ? Math.round(co / sp * 100) / 100 : 0,
+        region:        regionMap[c.campaign_id] || ''
       });
     });
     // Populate account filter
@@ -614,8 +661,9 @@ function loadOverview() {
     document.getElementById('ov-commission').textContent = totals.commission ? rm(totals.commission) : '-';
     document.getElementById('ov-roi').textContent        = totals.roi ? totals.roi + 'x' : '-';
     renderTable();
+    renderMap();
   }).catch(function(e) {
-    document.getElementById('ov-tbody').innerHTML = '<tr><td colspan="12" class="empty">Failed to load &mdash; ' + e.message + '</td></tr>';
+    document.getElementById('ov-tbody').innerHTML = '<tr><td colspan="13" class="empty">Failed to load &mdash; ' + e.message + '</td></tr>';
   });
 }
 
@@ -660,6 +708,9 @@ function loadProfitTab() {
         '<label>Closing Sales (units)<input type="number" id="'+rowId+'-cs" value="'+cs+'" min="0" /></label>' +
         '<label>Nett Sales (RM)<input type="number" id="'+rowId+'-ns" value="'+ns+'" min="0" /></label>' +
         '<label>Commission (RM)<input type="number" id="'+rowId+'-co" value="'+co+'" min="0" /></label>' +
+        '<label>Region<select id="'+rowId+'-rg" style="padding:8px 10px;font-size:13px;"><option value="">— None —</option>' +
+        REGIONS.map(function(r){ return '<option value="'+r+'"'+(regionMap[c.campaign_id]===r?' selected':'')+'>'+r+'</option>'; }).join('') +
+        '</select></label>' +
         '</div>' +
         '<div style="display:flex;gap:8px;">' +
         '<button class="btn-primary" style="padding:8px 18px;font-size:10px;" onclick="saveProfit(\''+escAttr(c.campaign_id)+'\',\''+escAttr(c.campaign_name)+'\',\''+rowId+'\')">Save</button>' +
@@ -684,11 +735,17 @@ function saveProfit(cid, cname, rowId) {
   var cs = parseInt(document.getElementById(rowId+'-cs').value) || 0;
   var ns = parseFloat(document.getElementById(rowId+'-ns').value) || 0;
   var co = parseFloat(document.getElementById(rowId+'-co').value) || 0;
+  var rgEl = document.getElementById(rowId+'-rg');
+  var rg = rgEl ? rgEl.value : '';
+  if (rg) { regionMap[cid] = rg; } else { delete regionMap[cid]; }
+  localStorage.setItem('jprop_regions', JSON.stringify(regionMap));
   apiFetch('/api/admin/profit', {method:'POST', body:JSON.stringify({campaign_id:cid,campaign_name:cname,closing_sales:cs,nett_sales:ns,commission:co})})
   .then(function() {
     showToast('Saved &mdash; ' + cname.substring(0,30));
     closeProfitForm(rowId);
     loadProfitTab();
+    // refresh overview map if campaigns are loaded
+    if (enrichedCampaigns.length) renderMap();
   }).catch(function(e){ showToast('Error: ' + e.message, 'err'); });
 }
 
@@ -846,6 +903,105 @@ function copyClaudePrompt() {
 }
 function closeClaudeModal() { document.getElementById('claude-modal').classList.remove('show'); }
 document.getElementById('claude-modal').addEventListener('click', function(e){ if(e.target===this) closeClaudeModal(); });
+
+// Region helpers
+function regionColor(region) {
+  var colors = {
+    'Penang':        '#5b8dee',
+    'JB CIQ':        '#e0b755',
+    'Petaling Jaya': '#4caf82',
+    'Bukit Jalil':   '#b08d3e',
+    'KLCC':          '#e05555',
+    'Bangsar':       '#a855f7'
+  };
+  return colors[region] || '#888';
+}
+
+function renderMap() {
+  // Compute per-region stats from enrichedCampaigns
+  var stats = {};
+  REGIONS.forEach(function(r){ stats[r] = {spend:0, leads:0, closings:0, commission:0, count:0}; });
+  enrichedCampaigns.forEach(function(c) {
+    var r = c.region;
+    if (r && stats[r]) {
+      stats[r].spend      += c.spend || 0;
+      stats[r].leads      += c.leads || 0;
+      stats[r].closings   += c.closing_sales || 0;
+      stats[r].commission += c.commission || 0;
+      stats[r].count      += 1;
+    }
+  });
+  // Max spend for circle sizing
+  var maxSpend = 1;
+  REGIONS.forEach(function(r){ if (stats[r].spend > maxSpend) maxSpend = stats[r].spend; });
+
+  // Build SVG circles
+  var svgG = document.getElementById('map-regions');
+  if (!svgG) return;
+  svgG.innerHTML = '';
+  REGIONS.forEach(function(r) {
+    var s = stats[r];
+    var pos = REGION_POS[r];
+    var radius = s.spend > 0 ? Math.max(10, Math.round(28 * Math.sqrt(s.spend / maxSpend))) : 6;
+    var roi = s.spend && s.commission ? s.commission / s.spend : 0;
+    var fill = s.spend === 0 ? 'rgba(247,245,240,0.08)' :
+               roi >= 2 ? 'rgba(76,175,130,0.55)' :
+               roi >= 1 ? 'rgba(224,183,85,0.55)' : 'rgba(224,85,85,0.55)';
+    var stroke = regionColor(r);
+
+    var circle = document.createElementNS('http://www.w3.org/2000/svg','circle');
+    circle.setAttribute('cx', pos.cx);
+    circle.setAttribute('cy', pos.cy);
+    circle.setAttribute('r', radius);
+    circle.setAttribute('fill', fill);
+    circle.setAttribute('stroke', stroke);
+    circle.setAttribute('stroke-width', '1.5');
+    circle.style.cursor = 'default';
+    // Tooltip
+    circle.addEventListener('mouseenter', function(e) {
+      var tip = document.getElementById('map-tooltip');
+      var roi2 = s.spend && s.commission ? Math.round(s.commission/s.spend*100)/100 : 0;
+      tip.innerHTML = '<b>'+r+'</b><br>Spend: RM '+s.spend.toLocaleString()+'<br>Leads: '+s.leads+'<br>Closings: '+(s.closings||'—')+'<br>Commission: '+(s.commission?'RM '+s.commission.toLocaleString():'—')+'<br>ROI: '+(roi2?roi2+'x':'—')+'<br>Campaigns: '+s.count;
+      tip.style.display = 'block';
+      tip.style.left = (pos.cx + 20) + 'px';
+      tip.style.top  = (pos.cy - 20) + 'px';
+    });
+    circle.addEventListener('mouseleave', function() {
+      document.getElementById('map-tooltip').style.display = 'none';
+    });
+    svgG.appendChild(circle);
+
+    // Label
+    var text = document.createElementNS('http://www.w3.org/2000/svg','text');
+    text.setAttribute('x', pos.cx);
+    text.setAttribute('y', pos.cy + radius + 13);
+    text.setAttribute('text-anchor', 'middle');
+    text.setAttribute('fill', stroke);
+    text.setAttribute('font-size', '8');
+    text.setAttribute('font-family', 'Inter,sans-serif');
+    text.textContent = r;
+    svgG.appendChild(text);
+  });
+
+  // Region table legend
+  var tbl = document.getElementById('region-table');
+  if (!tbl) return;
+  var rows = REGIONS.map(function(r) {
+    var s = stats[r];
+    var roi = s.spend && s.commission ? Math.round(s.commission/s.spend*100)/100 : 0;
+    var col = regionColor(r);
+    return '<div class="region-row">' +
+      '<span class="region-dot" style="background:'+col+';"></span>' +
+      '<span class="region-name">'+r+'</span>' +
+      '<span class="region-kpis">' +
+        (s.spend ? 'RM '+s.spend.toLocaleString() : '<span style="opacity:.4">No data</span>') +
+        (s.leads ? ' &middot; '+s.leads+' leads' : '') +
+        (s.closings ? ' &middot; '+s.closings+' closed' : '') +
+        (roi ? ' &middot; <span style="color:'+(roi>=2?'#4caf82':roi>=1?'#e0b755':'#e05555')+'">'+roi+'x</span>' : '') +
+      '</span></div>';
+  }).join('');
+  tbl.innerHTML = '<div style="font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:12px;">Circle size = spend &nbsp;&#x25CF;&nbsp; Color: green=ROI≥2x, yellow=1–2x, red=below 1x</div>' + rows;
+}
 
 function escHtml(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function escAttr(s) { return String(s||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'"); }
