@@ -15,7 +15,7 @@ INSIGHT_FIELDS = ",".join([
     "spend",
     "impressions",
     "cpm",
-    "ctr",
+    "inline_link_click_ctr",
     "actions",
     "video_thruplay_watched_actions",
 ])
@@ -29,7 +29,7 @@ ADSET_INSIGHT_FIELDS = ",".join([
     "spend",
     "impressions",
     "cpm",
-    "ctr",
+    "inline_link_click_ctr",
     "actions",
     "video_thruplay_watched_actions",
 ])
