@@ -737,7 +737,7 @@ function renderTable() {
       '<td class="r">' + cplBadge(c.cpl) + '</td>' +
       '<td class="r" style="color:var(--muted);">' + (c.cpm ? 'RM '+c.cpm : '&mdash;') + '</td>' +
       '<td class="r" style="color:var(--muted);">' + (c.hook_pct ? c.hook_pct+'%' : '&mdash;') + '</td>' +
-      '<td class="r" style="color:var(--muted);">' + (c.ctr ? c.ctr+'%' : '&mdash;') + '</td>' +
+      '<td class="r" style="color:var(--muted);">' + ((c.link_ctr || c.inline_link_click_ctr || c.ctr) ? (c.link_ctr || c.inline_link_click_ctr || c.ctr) + '%' : '&mdash;') + '</td>' +
       '<td class="r">' + (c.closing_sales || '<span style="color:var(--muted)">&mdash;</span>') + '</td>' +
       '<td class="r green-val">' + (c.commission ? rm(c.commission) : '<span style="color:var(--muted)">&mdash;</span>') + '</td>' +
       '<td class="r">' + roiBadge(c.roi) + '</td>' +
@@ -1041,7 +1041,7 @@ function openClaudeAnalysis() {
     var presetLabels = {'last_week_sun_sat':'Last Week','this_week_sun_today':'This Week','this_month':'This Month','last_month':'Last Month','this_year':'This Year','custom':(customSince&&customUntil?customSince+' to '+customUntil:'Custom')};
     var lines = data.map(function(c){
       return '- ' + c.campaign_name + ' [' + (c.account_label||'') + '] ' + (c.effective_status||'ACTIVE') + '\n' +
-        '  Spend: RM ' + c.spend + ' | Leads: ' + c.leads + ' | CPL: RM ' + (c.cpl||'-') + ' | CPM: RM ' + (c.cpm||'-') + ' | CTR: ' + (c.ctr||'-') + '%\n' +
+        '  Spend: RM ' + c.spend + ' | Leads: ' + c.leads + ' | CPL: RM ' + (c.cpl||'-') + ' | CPM: RM ' + (c.cpm||'-') + ' | CTR: ' + (c.link_ctr || c.inline_link_click_ctr || c.ctr || '-') + '%\n' +
         '  Closings: ' + (c.closing_sales||'-') + ' | Commission: RM ' + (c.commission||'-') + ' | ROI: ' + (c.roi||'-') + 'x';
     }).join('\n\n');
     var prompt = 'JPROP REAL ESTATE — META ADS PERFORMANCE REPORT\nPeriod: ' + (presetLabels[currentPreset]||currentPreset) + '\n\n' +
@@ -1381,7 +1381,7 @@ function renderMap() {
         (roi ? ' &middot; <span style="color:'+(roi>=2?'#4caf82':roi>=1?'#e0b755':'#e05555')+'">'+roi+'x</span>' : '') +
       '</span></div>';
   }).join('');
-  tbl.innerHTML = '<div style="font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:12px;">Circle size = spend &nbsp;&#x25CF;&nbsp; Color: green=ROI≥2x, yellow=1–2x, red=below 1x</div>' + rows;
+  tbl.innerHTML = '<div style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:12px;">Circle size = spend &nbsp;&#x25CF;&nbsp; Color: green=ROI≥2x, yellow=1–2x, red=below 1x</div>' + rows;
 }
 
 function escHtml(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
