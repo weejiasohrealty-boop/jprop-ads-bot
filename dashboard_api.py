@@ -159,6 +159,9 @@ async def all_campaigns(preset: str = "last_week_sun_sat", since: str = "", unti
                 "ctr":           round(float(c.get("ctr", 0)), 2),
                 "impressions":   imp,
                 "hook_pct":      hook_pct,
+                 "daily_budget":     r.get("budget_map", {}).get(cid, 0),    # ← ADD
+    "effective_status": c.get("effective_status", "ACTIVE"),    # ← ADD
+    "updated_time":     c.get("updated_time", ""),              # ← ADD
             })
     return out
 
