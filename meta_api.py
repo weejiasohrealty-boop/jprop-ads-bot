@@ -17,6 +17,7 @@ INSIGHT_FIELDS = ",".join([
     "impressions",
     "cpm",
     "inline_link_click_ctr",
+    "frequency",          # ← 加这行
     "actions",
     "video_thruplay_watched_actions",
 ])
@@ -31,6 +32,7 @@ ADSET_INSIGHT_FIELDS = ",".join([
     "impressions",
     "cpm",
     "inline_link_click_ctr",
+    “frequency",
     "actions",
     "video_thruplay_watched_actions",
 ])
