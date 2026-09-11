@@ -229,17 +229,19 @@ tr:hover td{background:rgba(247,245,240,0.02);}
             <th class="r" data-sort="daily_budget" onclick="sortBy('daily_budget')">Budget/day <span class="sort-arrow">&#8597;</span></th>
             <th class="r" data-sort="spend" onclick="sortBy('spend')">Spend <span class="sort-arrow">&#8597;</span></th>
             <th class="r" data-sort="leads" onclick="sortBy('leads')">Leads <span class="sort-arrow">&#8597;</span></th>
+            <th class="r" data-sort="messages" onclick="sortBy('messages')">Messages <span class="sort-arrow">&#8597;</span></th>
             <th class="r" data-sort="cpl" onclick="sortBy('cpl')">CPL <span class="sort-arrow">&#8597;</span></th>
             <th class="r" data-sort="cpm" onclick="sortBy('cpm')">CPM <span class="sort-arrow">&#8597;</span></th>
             <th class="r" data-sort="hook_pct" onclick="sortBy('hook_pct')">Hook% <span class="sort-arrow">&#8597;</span></th>
             <th class="r" data-sort="ctr" onclick="sortBy('ctr')">CTR <span class="sort-arrow">&#8597;</span></th>
+            <th class="r" data-sort="frequency" onclick="sortBy('frequency')">Freq <span class="sort-arrow">&#8597;</span></th>
             <th class="r" data-sort="closing_sales" onclick="sortBy('closing_sales')">Closings <span class="sort-arrow">&#8597;</span></th>
             <th class="r" data-sort="commission" onclick="sortBy('commission')">Commission <span class="sort-arrow">&#8597;</span></th>
             <th class="r" data-sort="roi" onclick="sortBy('roi')">ROI <span class="sort-arrow">&#8597;</span></th>
           </tr>
         </thead>
         <tbody id="ov-tbody">
-          <tr><td colspan="14" class="loading">Loading campaigns&#8230;</td></tr>
+          <tr><td colspan="16" class="loading">Loading campaigns&#8230;</td></tr>
         </tbody>
       </table>
     </div>
@@ -722,7 +724,7 @@ function renderTable() {
   var countEl = document.getElementById('result-count');
   if (countEl) countEl.textContent = data.length + ' campaign' + (data.length !== 1 ? 's' : '');
   if (!data.length) {
-    document.getElementById('ov-tbody').innerHTML = '<tr><td colspan="14" class="empty">No campaigns match filters</td></tr>';
+    document.getElementById('ov-tbody').innerHTML = '<tr><td colspan="16" class="empty">No campaigns match filters</td></tr>';
     return;
   }
   // Rows — with region group headers when sorted by region
@@ -738,6 +740,7 @@ function renderTable() {
       var grpCampaigns = data.filter(function(x){ return (x.region||'') === rgn; });
       var grpSpend = grpCampaigns.reduce(function(s,x){ return s+(x.spend||0); }, 0);
       var grpLeads = grpCampaigns.reduce(function(s,x){ return s+(x.leads||0); }, 0);
+      var grpMessages = grpCampaigns.reduce(function(s,x){ return s+(x.messages||0); }, 0);
       var grpBudget = grpCampaigns.reduce(function(s,x){ return s+(x.daily_budget||0); }, 0);
       var cpmVals = grpCampaigns.filter(function(x){ return x.cpm; });
       var grpCPM = cpmVals.length ? Math.round(cpmVals.reduce(function(s,x){ return s+x.cpm; },0)/cpmVals.length*100)/100 : 0;
@@ -753,9 +756,10 @@ function renderTable() {
         '<td class="r" style="font-size:11px;color:var(--muted);">'+(grpBudget?'RM '+Math.round(grpBudget):'—')+'</td>' +
         '<td class="r" style="font-size:11px;color:var(--gold);">'+(grpSpend?rm(grpSpend):'—')+'</td>' +
         '<td class="r" style="font-size:11px;">'+(grpLeads||'—')+'</td>' +
+        '<td class="r" style="font-size:11px;color:var(--muted);">'+(grpMessages||'—')+'</td>' +
         '<td class="r" style="font-size:11px;">'+(grpCPL?'RM '+grpCPL:'—')+'</td>' +
         '<td class="r" style="font-size:11px;">'+(grpCPM?'RM '+grpCPM+' avg':'—')+'</td>' +
-        '<td colspan="5"></td>' +
+        '<td colspan="6"></td>' +
         '</tr>';
     }
     rows += '<tr>' +
@@ -766,10 +770,12 @@ function renderTable() {
       '<td class="r" style="color:var(--muted);">' + (c.daily_budget ? 'RM '+Math.round(c.daily_budget) : '&mdash;') + '</td>' +
       '<td class="r gold-val">' + rm(c.spend) + '</td>' +
       '<td class="r">' + (c.leads ? c.leads : '<span title="Spending with no leads!">⚠️</span>') + '</td>' +
+      '<td class="r" style="color:var(--muted);">' + (c.messages ? c.messages : '&mdash;') + '</td>' +
       '<td class="r">' + cplBadge(c.cpl) + '</td>' +
       '<td class="r" style="color:var(--muted);">' + (c.cpm ? 'RM '+c.cpm : '&mdash;') + '</td>' +
       '<td class="r" style="color:var(--muted);">' + (c.hook_pct ? c.hook_pct+'%' : '&mdash;') + '</td>' +
       '<td class="r" style="color:var(--muted);">' + (c.ctr ? c.ctr+'%' : '&mdash;') + '</td>' +
+      '<td class="r" style="color:var(--muted);">' + (c.frequency ? c.frequency+'x' : '&mdash;') + '</td>' +
       '<td class="r">' + (c.closing_sales || '<span style="color:var(--muted)">&mdash;</span>') + '</td>' +
       '<td class="r green-val">' + (c.commission ? rm(c.commission) : '<span style="color:var(--muted)">&mdash;</span>') + '</td>' +
       '<td class="r">' + roiBadge(c.roi) + '</td>' +
@@ -780,18 +786,20 @@ function renderTable() {
     return {
       spend:         acc.spend + (c.spend||0),
       leads:         acc.leads + (c.leads||0),
+      messages:      acc.messages + (c.messages||0),
       closing_sales: acc.closing_sales + (c.closing_sales||0),
       commission:    acc.commission + (c.commission||0)
     };
-  }, {spend:0, leads:0, closing_sales:0, commission:0});
+  }, {spend:0, leads:0, messages:0, closing_sales:0, commission:0});
   totals.cpl = totals.leads ? Math.round(totals.spend / totals.leads * 100) / 100 : 0;
   totals.roi = totals.spend && totals.commission ? Math.round(totals.commission / totals.spend * 100) / 100 : 0;
   var totalRow = '<tr class="total-row">' +
     '<td><b>TOTAL</b></td><td>&mdash;</td><td>&mdash;</td><td>&mdash;</td><td>&mdash;</td>' +
     '<td class="r"><b>' + rm(totals.spend) + '</b></td>' +
     '<td class="r"><b>' + totals.leads + '</b></td>' +
+    '<td class="r"><b>' + (totals.messages || '&mdash;') + '</b></td>' +
     '<td class="r">' + (totals.cpl ? 'RM '+totals.cpl : '&mdash;') + '</td>' +
-    '<td class="r">&mdash;</td><td class="r">&mdash;</td><td class="r">&mdash;</td>' +
+    '<td class="r">&mdash;</td><td class="r">&mdash;</td><td class="r">&mdash;</td><td class="r">&mdash;</td>' +
     '<td class="r"><b>' + (totals.closing_sales || '&mdash;') + '</b></td>' +
     '<td class="r"><b>' + (totals.commission ? rm(totals.commission) : '&mdash;') + '</b></td>' +
     '<td class="r"><b>' + (totals.roi ? totals.roi+'x' : '&mdash;') + '</b></td>' +
@@ -804,7 +812,7 @@ function loadOverview() {
   ['ov-budget-active','ov-budget','ov-spend','ov-leads','ov-cpl','ov-closing','ov-commission','ov-roi'].forEach(function(id){
     document.getElementById(id).textContent = '…';
   });
-  document.getElementById('ov-tbody').innerHTML = '<tr><td colspan="14" class="loading">Fetching live data…</td></tr>';
+  document.getElementById('ov-tbody').innerHTML = '<tr><td colspan="16" class="loading">Fetching live data…</td></tr>';
   var url = '/api/admin/campaigns?preset=' + currentPreset;
   if (currentPreset === 'custom' && customSince && customUntil) {
     url = '/api/admin/campaigns?preset=custom&since=' + customSince + '&until=' + customUntil;
@@ -861,7 +869,7 @@ function loadOverview() {
     renderTable();
     renderMap();
   }).catch(function(e) {
-    document.getElementById('ov-tbody').innerHTML = '<tr><td colspan="14" class="empty">Failed to load &mdash; ' + e.message + '</td></tr>';
+    document.getElementById('ov-tbody').innerHTML = '<tr><td colspan="16" class="empty">Failed to load &mdash; ' + e.message + '</td></tr>';
   });
 }
 

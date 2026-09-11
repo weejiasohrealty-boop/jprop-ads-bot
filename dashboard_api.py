@@ -4,13 +4,6 @@ BASE_DIR = pathlib.Path(__file__).parent
 """
 dashboard_api.py — JPROP Investor Dashboard API
 FastAPI backend. Run with: uvicorn dashboard_api:app --host 0.0.0.0 --port 8000
-
-Environment variables (add to Render):
-    DASHBOARD_SECRET   — random secret for signing tokens (required)
-    ADMIN_EMAIL        — WJ's admin login email
-    ADMIN_PASSWORD     — WJ's admin login password
-    DB_PATH            — path to SQLite file (default: jprop.db)
-    TOKEN_JPROP / TOKEN_AM / TOKEN_TONY — Meta API tokens (same as bot)
 """
 import os, hashlib, hmac
 from datetime import datetime, timezone, date
@@ -30,6 +23,8 @@ from meta_api import (
     get_actions_value, LEAD_ACTION_TYPES,
 )
 
+WHATSAPP_ACTION_TYPES = {"onsite_conversion.messaging_conversation_started_7d"}
+
 app = FastAPI(title="JPROP Dashboard API")
 app.add_middleware(
     CORSMiddleware,
@@ -40,14 +35,10 @@ SECRET         = os.environ.get("DASHBOARD_SECRET", "change-me-now")
 ADMIN_EMAIL    = os.environ.get("ADMIN_EMAIL", "wj@jprop.com")
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "jprop2024")
 
-# ── Startup ──────────────────────────────────────────────
-
 @app.on_event("startup")
 def startup():
     init_db()
-    create_user("WJ Admin", ADMIN_EMAIL, ADMIN_PASSWORD, "admin")  # no-op if exists
-
-# ── Token helpers ──────────────────────────────────────────
+    create_user("WJ Admin", ADMIN_EMAIL, ADMIN_PASSWORD, "admin")
 
 def _make_token(user_id: int, role: str) -> str:
     ts = int(datetime.now(timezone.utc).timestamp())
@@ -80,8 +71,6 @@ def admin_only(user=Depends(current_user)):
         raise HTTPException(403, "Admin only")
     return user
 
-# ── Auth ─────────────────────────────────────────────────
-
 class LoginReq(BaseModel):
     email: str
     password: str
@@ -96,8 +85,6 @@ def login(req: LoginReq):
         "role":  user["role"],
         "name":  user["name"],
     }
-
-# ── Admin: investors ─────────────────────────────────────────
 
 class CreateInvestorReq(BaseModel):
     name: str
@@ -128,11 +115,8 @@ def reset_pw(user_id: int, req: ResetPwReq, _=Depends(admin_only)):
     update_password(user_id, req.new_password)
     return {"ok": True}
 
-# ── Admin: campaigns (live from Meta) ─────────────────────
-
 @app.get("/api/admin/campaigns")
 async def all_campaigns(preset: str = "last_week_sun_sat", since: str = "", until: str = "", _=Depends(admin_only)):
-    """All campaigns across all accounts — for overview and assignment UI."""
     if preset == "this_year":
         today = date.today()
         since = f"{today.year}-01-01"
@@ -144,6 +128,7 @@ async def all_campaigns(preset: str = "last_week_sun_sat", since: str = "", unti
             cid  = c.get("campaign_id", "")
             sp   = float(c.get("spend", 0))
             ld   = get_actions_value(c.get("actions") or [], LEAD_ACTION_TYPES)
+            msg  = get_actions_value(c.get("actions") or [], WHATSAPP_ACTION_TYPES)
             imp  = int(c.get("impressions", 0))
             hook = get_actions_value(c.get("actions") or [], {"video_view"})
             hook_pct = round(hook / imp * 100, 1) if imp else 0
@@ -154,9 +139,11 @@ async def all_campaigns(preset: str = "last_week_sun_sat", since: str = "", unti
                 "campaign_name":    c.get("campaign_name", ""),
                 "spend":            round(sp, 2),
                 "leads":            int(ld),
+                "messages":         int(msg),
                 "cpl":              round(sp / ld, 2) if ld else 0,
                 "cpm":              round(float(c.get("cpm", 0)), 2),
                 "ctr":              round(float(c.get("inline_link_click_ctr") or c.get("link_ctr") or 0), 2),
+                "frequency":        round(float(c.get("frequency", 0)), 2),
                 "impressions":      imp,
                 "hook_pct":         hook_pct,
                 "daily_budget":     r.get("budget_map", {}).get(cid, 0),
@@ -164,8 +151,6 @@ async def all_campaigns(preset: str = "last_week_sun_sat", since: str = "", unti
                 "updated_time":     c.get("updated_time", ""),
             })
     return out
-
-# ── Admin: assignments ─────────────────────────────────────────
 
 class AssignReq(BaseModel):
     user_id:       int
@@ -187,8 +172,6 @@ def do_unassign(user_id: int, campaign_id: str, _=Depends(admin_only)):
 def investor_assignments(user_id: int, _=Depends(admin_only)):
     return get_assignments(user_id)
 
-# ── Admin: profit entry ─────────────────────────────────────────
-
 class ProfitReq(BaseModel):
     campaign_id:   str
     campaign_name: str
@@ -208,8 +191,6 @@ def save_profit(req: ProfitReq, _=Depends(admin_only)):
 def all_profits(_=Depends(admin_only)):
     return list_profits()
 
-# ── Investor: dashboard ─────────────────────────────────────────
-
 @app.get("/api/dashboard")
 async def investor_dashboard(preset: str = "last_week_sun_sat", user=Depends(current_user)):
     assignments = get_assignments(user["user_id"])
@@ -228,21 +209,28 @@ async def investor_dashboard(preset: str = "last_week_sun_sat", user=Depends(cur
                 continue
             sp  = float(c.get("spend", 0))
             ld  = get_actions_value(c.get("actions") or [], LEAD_ACTION_TYPES)
+            msg = get_actions_value(c.get("actions") or [], WHATSAPP_ACTION_TYPES)
             cpl = round(sp / ld, 2) if ld else 0
             p   = get_profit(c.get("campaign_id", ""))
             closing_sales = p.get("closing_sales", 0)
             nett_sales    = p.get("nett_sales", 0)
             commission    = p.get("commission", 0)
             roi           = round(commission / sp, 2) if sp and commission else 0
+            imp           = int(c.get("impressions", 0))
+            hook          = get_actions_value(c.get("actions") or [], {"video_view"})
             campaigns.append({
                 "campaign_id":   c.get("campaign_id"),
                 "campaign_name": c.get("campaign_name"),
                 "account":       r["label"],
                 "spend":         round(sp, 2),
                 "leads":         int(ld),
+                "messages":      int(msg),
                 "cpl":           cpl,
                 "cpm":           round(float(c.get("cpm", 0)), 2),
                 "ctr":           round(float(c.get("inline_link_click_ctr") or c.get("link_ctr") or 0), 2),
+                "frequency":     round(float(c.get("frequency", 0)), 2),
+                "impressions":   imp,
+                "hook_rate":     round(hook / imp * 100, 1) if imp else 0,
                 "closing_sales": closing_sales,
                 "nett_sales":    nett_sales,
                 "commission":    commission,
@@ -261,8 +249,6 @@ async def investor_dashboard(preset: str = "last_week_sun_sat", user=Depends(cur
     totals["cpl"] = round(totals["spend"] / totals["leads"], 2) if totals["leads"] else 0
     totals["roi"] = round(totals["commission"] / totals["spend"], 2) if totals["spend"] and totals["commission"] else 0
     return {"campaigns": campaigns, "totals": totals}
-
-# ── Serve HTML files ───────────────────────────────────────────
 
 @app.get("/", response_class=HTMLResponse)
 def serve_dashboard():
