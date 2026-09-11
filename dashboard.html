@@ -151,7 +151,7 @@ tr:hover td{background:rgba(247,245,240,0.02);}
             <th class="r">Ad Spend</th>
             <th class="r">Cost / Lead</th>
             <th class="r">Frequency</th>
-            <th class="r">Messages</th>
+            <th class="r">Results</th>
             <th class="r">Commission</th>
             <th>Notes</th>
           </tr>
@@ -294,7 +294,7 @@ async function loadDashboard() {
       <td class="r gold-val">${rm(c.spend)}</td>
       <td class="r">${cplBadge(c.cpl)}</td>
       <td class="r" style="color:var(--muted)">${c.frequency ? c.frequency + 'x' : '—'}</td>
-      <td class="r" style="color:var(--muted)">${c.messages || '—'}</td>
+      <td class="r">${c.messages && !c.leads ? '<span style="color:var(--muted)">💬 '+c.messages+'</span>' : c.leads && !c.messages ? c.leads : c.leads && c.messages ? c.leads+' <span style="color:var(--muted);font-size:11px;">/ 💬 '+c.messages+'</span>' : '—'}</td>
       <td class="r green-val">${c.commission ? rm(c.commission) : '<span style="color:var(--muted)">—</span>'}</td>
       <td><span style="font-size:11px;color:var(--muted);max-width:160px;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${c.notes || ''}">${c.notes || '—'}</span></td>
     </tr>
