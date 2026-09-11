@@ -121,7 +121,7 @@ async def all_campaigns(preset: str = "last_week_sun_sat", since: str = "", unti
         today = date.today()
         since = f"{today.year}-01-01"
         until = today.strftime("%Y-%m-%d")
-    results = await fetch_all_accounts(preset)
+    results = await fetch_all_accounts(preset, since=since, until=until)
     out = []
     for i, r in enumerate(results):
         for c in (r.get("data") or []):
