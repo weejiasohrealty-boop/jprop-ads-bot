@@ -148,20 +148,20 @@ async def all_campaigns(preset: str = "last_week_sun_sat", since: str = "", unti
             hook = get_actions_value(c.get("actions") or [], {"video_view"})
             hook_pct = round(hook / imp * 100, 1) if imp else 0
             out.append({
-                "account_idx":   i,
-                "account_label": r["label"],
-                "campaign_id":   cid,
-                "campaign_name": c.get("campaign_name", ""),
-                "spend":         round(sp, 2),
-                "leads":         int(ld),
-                "cpl":           round(sp / ld, 2) if ld else 0,
-                "cpm":           round(float(c.get("cpm", 0)), 2),
-                "ctr":           round(float(c.get("ctr", 0)), 2),
-                "impressions":   imp,
-                "hook_pct":      hook_pct,
-                 "daily_budget":     r.get("budget_map", {}).get(cid, 0),    # ← ADD
-    "effective_status": c.get("effective_status", "ACTIVE"),    # ← ADD
-    "updated_time":     c.get("updated_time", ""),              # ← ADD
+                "account_idx":      i,
+                "account_label":    r["label"],
+                "campaign_id":      cid,
+                "campaign_name":    c.get("campaign_name", ""),
+                "spend":            round(sp, 2),
+                "leads":            int(ld),
+                "cpl":              round(sp / ld, 2) if ld else 0,
+                "cpm":              round(float(c.get("cpm", 0)), 2),
+                "ctr":              round(float(c.get("inline_link_click_ctr") or c.get("link_ctr") or 0), 2),
+                "impressions":      imp,
+                "hook_pct":         hook_pct,
+                "daily_budget":     r.get("budget_map", {}).get(cid, 0),
+                "effective_status": c.get("effective_status", "ACTIVE"),
+                "updated_time":     c.get("updated_time", ""),
             })
     return out
 
@@ -242,7 +242,7 @@ async def investor_dashboard(preset: str = "last_week_sun_sat", user=Depends(cur
                 "leads":         int(ld),
                 "cpl":           cpl,
                 "cpm":           round(float(c.get("cpm", 0)), 2),
-                "ctr":           round(float(c.get("ctr", 0)), 2),
+                "ctr":           round(float(c.get("inline_link_click_ctr") or c.get("link_ctr") or 0), 2),
                 "closing_sales": closing_sales,
                 "nett_sales":    nett_sales,
                 "commission":    commission,
@@ -275,4 +275,3 @@ def serve_admin():
 @app.get("/weekly-report", response_class=HTMLResponse)
 def serve_weekly_report():
     return FileResponse(BASE_DIR / "weekly-report.html")
-    
