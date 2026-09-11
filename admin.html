@@ -228,7 +228,8 @@ tr:hover td{background:rgba(247,245,240,0.02);}
             <th>Status</th>
             <th class="r" data-sort="daily_budget" onclick="sortBy('daily_budget')">Budget/day <span class="sort-arrow">&#8597;</span></th>
             <th class="r" data-sort="spend" onclick="sortBy('spend')">Spend <span class="sort-arrow">&#8597;</span></th>
-            <th class="r" data-sort="leads" onclick="sortBy('leads')">Results <span class="sort-arrow">&#8597;</span></th>
+            <th class="r" data-sort="leads" onclick="sortBy('leads')">Leads <span class="sort-arrow">&#8597;</span></th>
+            <th class="r" data-sort="messages" onclick="sortBy('messages')">Messages <span class="sort-arrow">&#8597;</span></th>
             <th class="r" data-sort="cpl" onclick="sortBy('cpl')">CPL <span class="sort-arrow">&#8597;</span></th>
             <th class="r" data-sort="cpm" onclick="sortBy('cpm')">CPM <span class="sort-arrow">&#8597;</span></th>
             <th class="r" data-sort="hook_pct" onclick="sortBy('hook_pct')">Hook% <span class="sort-arrow">&#8597;</span></th>
@@ -240,7 +241,7 @@ tr:hover td{background:rgba(247,245,240,0.02);}
           </tr>
         </thead>
         <tbody id="ov-tbody">
-          <tr><td colspan="15" class="loading">Loading campaigns&#8230;</td></tr>
+          <tr><td colspan="16" class="loading">Loading campaigns&#8230;</td></tr>
         </tbody>
       </table>
     </div>
@@ -538,14 +539,6 @@ let regionMap = JSON.parse(localStorage.getItem('jprop_regions') || '{}');
 function rm(v) {
   return 'RM ' + Number(v).toLocaleString('en-MY', {minimumFractionDigits:0, maximumFractionDigits:0});
 }
-function resultCell(c) {
-  var leads = c.leads || 0;
-  var msg   = c.messages || 0;
-  if (msg > 0 && leads === 0) return '<span style="color:var(--muted);">💬 ' + msg + '</span>';
-  if (leads > 0 && msg === 0) return leads;
-  if (leads > 0 && msg > 0)   return leads + ' <span style="color:var(--muted);font-size:11px;">/ 💬 ' + msg + '</span>';
-  return '<span title="Spending with no results!">⚠️</span>';
-}
 function cplBadge(v) {
   if (!v) return '<span style="color:var(--muted)">&mdash;</span>';
   const cls = v <= 50 ? 'bg' : v <= 100 ? 'by' : 'br';
@@ -731,7 +724,7 @@ function renderTable() {
   var countEl = document.getElementById('result-count');
   if (countEl) countEl.textContent = data.length + ' campaign' + (data.length !== 1 ? 's' : '');
   if (!data.length) {
-    document.getElementById('ov-tbody').innerHTML = '<tr><td colspan="15" class="empty">No campaigns match filters</td></tr>';
+    document.getElementById('ov-tbody').innerHTML = '<tr><td colspan="16" class="empty">No campaigns match filters</td></tr>';
     return;
   }
   // Rows — with region group headers when sorted by region
@@ -762,7 +755,8 @@ function renderTable() {
         '</td>' +
         '<td class="r" style="font-size:11px;color:var(--muted);">'+(grpBudget?'RM '+Math.round(grpBudget):'—')+'</td>' +
         '<td class="r" style="font-size:11px;color:var(--gold);">'+(grpSpend?rm(grpSpend):'—')+'</td>' +
-        '<td class="r" style="font-size:11px;">'+(grpLeads ? grpLeads+' leads' : '')+(grpLeads&&grpMessages?' / ':'')+(grpMessages ? grpMessages+' msg' : '')+(!grpLeads&&!grpMessages?'—':'')+'</td>' +
+        '<td class="r" style="font-size:11px;">'+(grpLeads||'—')+'</td>' +
+        '<td class="r" style="font-size:11px;color:var(--muted);">'+(grpMessages||'—')+'</td>' +
         '<td class="r" style="font-size:11px;">'+(grpCPL?'RM '+grpCPL:'—')+'</td>' +
         '<td class="r" style="font-size:11px;">'+(grpCPM?'RM '+grpCPM+' avg':'—')+'</td>' +
         '<td colspan="6"></td>' +
@@ -775,7 +769,8 @@ function renderTable() {
       '<td>' + statusBadge(c.effective_status) + '</td>' +
       '<td class="r" style="color:var(--muted);">' + (c.daily_budget ? 'RM '+Math.round(c.daily_budget) : '&mdash;') + '</td>' +
       '<td class="r gold-val">' + rm(c.spend) + '</td>' +
-      '<td class="r">' + resultCell(c) + '</td>' +
+      '<td class="r">' + (c.leads ? c.leads : '<span style="color:var(--muted)">&mdash;</span>') + '</td>' +
+      '<td class="r" style="color:var(--muted);">' + (c.messages ? c.messages : '&mdash;') + '</td>' +
       '<td class="r">' + cplBadge(c.cpl) + '</td>' +
       '<td class="r" style="color:var(--muted);">' + (c.cpm ? 'RM '+c.cpm : '&mdash;') + '</td>' +
       '<td class="r" style="color:var(--muted);">' + (c.hook_pct ? c.hook_pct+'%' : '&mdash;') + '</td>' +
@@ -801,7 +796,8 @@ function renderTable() {
   var totalRow = '<tr class="total-row">' +
     '<td><b>TOTAL</b></td><td>&mdash;</td><td>&mdash;</td><td>&mdash;</td><td>&mdash;</td>' +
     '<td class="r"><b>' + rm(totals.spend) + '</b></td>' +
-    '<td class="r"><b>' + (totals.leads ? totals.leads + ' leads' : '') + (totals.leads && totals.messages ? ' / ' : '') + (totals.messages ? totals.messages + ' msg' : '') + ((!totals.leads && !totals.messages) ? '&mdash;' : '') + '</b></td>' +
+    '<td class="r"><b>' + (totals.leads || '&mdash;') + '</b></td>' +
+    '<td class="r"><b>' + (totals.messages || '&mdash;') + '</b></td>' +
     '<td class="r">' + (totals.cpl ? 'RM '+totals.cpl : '&mdash;') + '</td>' +
     '<td class="r">&mdash;</td><td class="r">&mdash;</td><td class="r">&mdash;</td><td class="r">&mdash;</td>' +
     '<td class="r"><b>' + (totals.closing_sales || '&mdash;') + '</b></td>' +
@@ -816,7 +812,7 @@ function loadOverview() {
   ['ov-budget-active','ov-budget','ov-spend','ov-leads','ov-cpl','ov-closing','ov-commission','ov-roi'].forEach(function(id){
     document.getElementById(id).textContent = '…';
   });
-  document.getElementById('ov-tbody').innerHTML = '<tr><td colspan="15" class="loading">Fetching live data…</td></tr>';
+  document.getElementById('ov-tbody').innerHTML = '<tr><td colspan="16" class="loading">Fetching live data…</td></tr>';
   var url = '/api/admin/campaigns?preset=' + currentPreset;
   if (currentPreset === 'custom' && customSince && customUntil) {
     url = '/api/admin/campaigns?preset=custom&since=' + customSince + '&until=' + customUntil;
@@ -873,7 +869,7 @@ function loadOverview() {
     renderTable();
     renderMap();
   }).catch(function(e) {
-    document.getElementById('ov-tbody').innerHTML = '<tr><td colspan="15" class="empty">Failed to load &mdash; ' + e.message + '</td></tr>';
+    document.getElementById('ov-tbody').innerHTML = '<tr><td colspan="16" class="empty">Failed to load &mdash; ' + e.message + '</td></tr>';
   });
 }
 

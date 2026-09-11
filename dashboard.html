@@ -151,13 +151,14 @@ tr:hover td{background:rgba(247,245,240,0.02);}
             <th class="r">Ad Spend</th>
             <th class="r">Cost / Lead</th>
             <th class="r">Frequency</th>
-            <th class="r">Results</th>
+            <th class="r">Leads</th>
+            <th class="r">Messages</th>
             <th class="r">Commission</th>
             <th>Notes</th>
           </tr>
         </thead>
         <tbody id="camp-tbody">
-          <tr><td colspan="7" class="loading">Loading your campaigns…</td></tr>
+          <tr><td colspan="8" class="loading">Loading your campaigns…</td></tr>
         </tbody>
       </table>
     </div>
@@ -255,7 +256,7 @@ function setPreset(preset, btn) {
 }
 
 async function loadDashboard() {
-  document.getElementById('camp-tbody').innerHTML = '<tr><td colspan="7" class="loading">Fetching live data from Meta Ads…</td></tr>';
+  document.getElementById('camp-tbody').innerHTML = '<tr><td colspan="8" class="loading">Fetching live data from Meta Ads…</td></tr>';
   ['s-spend','s-cpl','s-commission'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.textContent = '…';
@@ -265,7 +266,7 @@ async function loadDashboard() {
   try {
     data = await apiFetch('/api/dashboard?preset=' + currentPreset);
   } catch(e) {
-    document.getElementById('camp-tbody').innerHTML = '<tr><td colspan="7" class="empty">Failed to load — please refresh</td></tr>';
+    document.getElementById('camp-tbody').innerHTML = '<tr><td colspan="8" class="empty">Failed to load — please refresh</td></tr>';
     return;
   }
 
@@ -281,7 +282,7 @@ async function loadDashboard() {
   document.getElementById('table-meta').textContent = campaigns.length + ' campaign' + (campaigns.length !== 1 ? 's' : '') + ' assigned';
 
   if (!campaigns.length) {
-    document.getElementById('camp-tbody').innerHTML = '<tr><td colspan="7" class="empty">No campaigns assigned yet. Contact WJ to get access.</td></tr>';
+    document.getElementById('camp-tbody').innerHTML = '<tr><td colspan="8" class="empty">No campaigns assigned yet. Contact WJ to get access.</td></tr>';
     return;
   }
 
@@ -294,7 +295,8 @@ async function loadDashboard() {
       <td class="r gold-val">${rm(c.spend)}</td>
       <td class="r">${cplBadge(c.cpl)}</td>
       <td class="r" style="color:var(--muted)">${c.frequency ? c.frequency + 'x' : '—'}</td>
-      <td class="r">${c.messages && !c.leads ? '<span style="color:var(--muted)">💬 '+c.messages+'</span>' : c.leads && !c.messages ? c.leads : c.leads && c.messages ? c.leads+' <span style="color:var(--muted);font-size:11px;">/ 💬 '+c.messages+'</span>' : '—'}</td>
+      <td class="r" style="color:var(--muted)">${c.leads || '—'}</td>
+      <td class="r" style="color:var(--muted)">${c.messages || '—'}</td>
       <td class="r green-val">${c.commission ? rm(c.commission) : '<span style="color:var(--muted)">—</span>'}</td>
       <td><span style="font-size:11px;color:var(--muted);max-width:160px;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${c.notes || ''}">${c.notes || '—'}</span></td>
     </tr>
@@ -306,6 +308,7 @@ async function loadDashboard() {
       <td><b>TOTAL</b></td>
       <td class="r"><b>${rm(tr.spend)}</b></td>
       <td class="r">${tr.cpl ? 'RM ' + tr.cpl : '—'}</td>
+      <td class="r">—</td>
       <td class="r">—</td>
       <td class="r">—</td>
       <td class="r"><b>${tr.commission ? rm(tr.commission) : '—'}</b></td>
