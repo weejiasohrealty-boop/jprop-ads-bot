@@ -4,6 +4,7 @@ meta_api.py — async Meta Graph API helpers
 Fetches insights + campaign budgets (CBO) + adset budgets (ABO) in parallel.
 """
 import os
+import json
 import asyncio
 import aiohttp
 
@@ -17,7 +18,7 @@ INSIGHT_FIELDS = ",".join([
     "impressions",
     "cpm",
     "inline_link_click_ctr",
-    "frequency",          # ← 加这行
+    "frequency",
     "actions",
     "video_thruplay_watched_actions",
 ])
@@ -55,7 +56,7 @@ ACCOUNTS = [
     {"label": "Hannah",                 "emoji": "🔥", "id": "act_1970417923796227", "token_key": "TOKEN_JPROP"},
     {"label": "Jayden",                 "emoji": "🌟", "id": "act_870160215193259",  "token_key": "TOKEN_JPROP"},
     {"label": "KJ",                     "emoji": "🤖", "id": "act_866285942301565",  "token_key": "TOKEN_JPROP"},
-    {"label": "Lisa",                     "emoji": "🏔️", "id": "act_1472295653590786",  "token_key": "TOKEN_JPROP"}
+    {"label": "Lisa",                   "emoji": "🏔️", "id": "act_1472295653590786", "token_key": "TOKEN_JPROP"},
 ]
 
 
@@ -71,30 +72,19 @@ def get_actions_value(actions: list, types: set) -> float:
 
 
 def extract_link_ctr(row: dict) -> float:
-    """
-    Extracts Link Click CTR (Outbound Link CTR).
-    Uses 'inline_link_click_ctr' if provided by Meta, 
-    otherwise calculates (link_clicks / impressions) * 100.
-    """
     if "inline_link_click_ctr" in row and row["inline_link_click_ctr"] is not None:
         return round(float(row["inline_link_click_ctr"]), 2)
-    
     impressions = float(row.get("impressions", 0))
     if impressions > 0:
         link_clicks = get_actions_value(row.get("actions", []), LINK_CLICK_ACTION_TYPES)
         return round((link_clicks / impressions) * 100, 2)
-        
     return 0.0
 
 
 def parse_budget_map(camp_data: list, adset_data: list) -> dict:
-    """Returns {campaign_id: daily_budget_RM}. Handles CBO and ABO."""
     m = {}
     for c in camp_data:
-        m[c["id"]] = {
-            "daily":   float(c.get("daily_budget", 0)) / 100,
-            "abo_sum": 0.0,
-        }
+        m[c["id"]] = {"daily": float(c.get("daily_budget", 0)) / 100, "abo_sum": 0.0}
     for s in adset_data:
         cid = s.get("campaign_id")
         if not cid:
@@ -102,25 +92,19 @@ def parse_budget_map(camp_data: list, adset_data: list) -> dict:
         if cid not in m:
             m[cid] = {"daily": 0.0, "abo_sum": 0.0}
         m[cid]["abo_sum"] += float(s.get("daily_budget", 0)) / 100
-
     return {cid: (v["daily"] if v["daily"] > 0 else v["abo_sum"]) for cid, v in m.items()}
 
 
 def parse_adset_budget_map(camp_data: list, adset_data: list) -> dict:
-    """
-    Returns {adset_id: daily_budget_RM} for adset-level weekly report.
-    ABO adsets: use their own daily_budget.
-    CBO adsets: use the campaign daily_budget (shared across all adsets).
-    """
     camp_budgets = {c["id"]: float(c.get("daily_budget", 0)) / 100 for c in camp_data}
     result = {}
     for s in adset_data:
         adset_bud = float(s.get("daily_budget", 0)) / 100
         if adset_bud > 0:
-            result[s["id"]] = adset_bud          # ABO — adset has its own budget
+            result[s["id"]] = adset_bud
         else:
             cid = s.get("campaign_id", "")
-            result[s["id"]] = camp_budgets.get(cid, 0)  # CBO — inherit campaign budget
+            result[s["id"]] = camp_budgets.get(cid, 0)
     return result
 
 
@@ -142,7 +126,6 @@ async def _fetch_account(session: aiohttp.ClientSession, account: dict, preset: 
 
     acc_id = account["id"]
 
-    # 3 parallel requests: insights + campaign budgets + adset budgets
     insights_task = _get(session, f"{GRAPH_API}/{acc_id}/insights", {
         "fields": INSIGHT_FIELDS, "level": "campaign",
         "date_preset": preset, "access_token": token, "limit": 100,
@@ -161,15 +144,12 @@ async def _fetch_account(session: aiohttp.ClientSession, account: dict, preset: 
     camp_data = camps.get("data", [])
     camp_attrs = {c["id"]: c for c in camp_data}
 
-    # Merge status, updated_time, link_ctr, and inline_link_click_ctr into each insight row
     insight_rows = ins.get("data", [])
     for row in insight_rows:
         cid = row.get("campaign_id")
         if cid and cid in camp_attrs:
             row["effective_status"] = camp_attrs[cid].get("effective_status", "UNKNOWN")
             row["updated_time"]     = camp_attrs[cid].get("updated_time", "")
-        
-        # Explicitly attach link_ctr float field for UI / Dashboard consumption
         calculated_ctr = extract_link_ctr(row)
         row["link_ctr"] = calculated_ctr
         if "inline_link_click_ctr" not in row or row["inline_link_click_ctr"] is None:
@@ -187,7 +167,6 @@ async def _fetch_account(session: aiohttp.ClientSession, account: dict, preset: 
 
 
 async def _fetch_account_adset(session: aiohttp.ClientSession, account: dict, preset: str) -> dict:
-    """Fetch adset-level insights — used for weekly Google Sheets report."""
     try:
         token = get_token(account["token_key"])
     except RuntimeError as e:
@@ -230,14 +209,12 @@ async def _fetch_account_adset(session: aiohttp.ClientSession, account: dict, pr
 
 
 async def fetch_all_accounts(preset: str) -> list:
-    """Fetch all accounts at campaign level (for Telegram reports / Dashboard)."""
     async with aiohttp.ClientSession() as session:
         tasks = [_fetch_account(session, acc, preset) for acc in ACCOUNTS]
         return await asyncio.gather(*tasks)
 
 
 async def fetch_all_accounts_adset(preset: str) -> list:
-    """Fetch all accounts at adset level (for weekly Google Sheets report)."""
     async with aiohttp.ClientSession() as session:
         tasks = [_fetch_account_adset(session, acc, preset) for acc in ACCOUNTS]
         return await asyncio.gather(*tasks)
@@ -247,32 +224,52 @@ async def fetch_single_account(idx: int, preset: str) -> dict:
     async with aiohttp.ClientSession() as session:
         return await _fetch_account(session, ACCOUNTS[idx], preset)
 
-async def fetch_trend_data(days: int = 30):
-    import requests
+
+async def fetch_trend_data(days: int = 30) -> list:
+    """Fetch day-by-day campaign insights for the Trends tab."""
     from datetime import date, timedelta
+
     until = date.today()
     since = until - timedelta(days=days)
-    TREND_FIELDS = "date_start,campaign_id,campaign_name,spend,impressions,cpm,inline_link_click_ctr,frequency,actions"
-    results = []
-    for acc in ACCOUNTS:
-        token = (acc.get("token") or acc.get("access_token") or "")
-        acc_id = (acc.get("id") or acc.get("account_id") or "")
+
+    TREND_FIELDS = ",".join([
+        "date_start",
+        "campaign_id",
+        "campaign_name",
+        "spend",
+        "impressions",
+        "cpm",
+        "inline_link_click_ctr",
+        "frequency",
+        "actions",
+    ])
+
+    time_range = json.dumps({
+        "since": since.strftime("%Y-%m-%d"),
+        "until": until.strftime("%Y-%m-%d"),
+    })
+
+    async def _fetch_one(session: aiohttp.ClientSession, acc: dict) -> dict:
+        try:
+            token = get_token(acc["token_key"])
+        except RuntimeError as e:
+            return {"label": acc["label"], "data": [], "error": {"message": str(e)}}
+
         params = {
             "fields":         TREND_FIELDS,
             "time_increment": 1,
             "level":          "campaign",
-            "since":          since.strftime("%Y-%m-%d"),
-            "until":          until.strftime("%Y-%m-%d"),
+            "time_range":     time_range,
             "access_token":   token,
+            "limit":          500,
         }
-        try:
-            resp = requests.get(
-                f"{BASE_URL}/{acc_id}/insights",
-                params=params,
-                timeout=60
-            )
-            data = resp.json().get("data", [])
-        except Exception:
-            data = []
-        results.append({"label": acc.get("label", acc_id), "data": data})
-    return results
+        result = await _get(session, f"{GRAPH_API}/{acc['id']}/insights", params)
+        return {
+            "label": acc["label"],
+            "data":  result.get("data", []),
+            "error": result.get("error"),
+        }
+
+    async with aiohttp.ClientSession() as session:
+        tasks = [_fetch_one(session, acc) for acc in ACCOUNTS]
+        return list(await asyncio.gather(*tasks))
