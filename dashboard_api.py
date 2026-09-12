@@ -19,7 +19,7 @@ from db import (
     get_profit, set_profit, list_profits,
 )
 from meta_api import (
-    ACCOUNTS, BASE_URL, fetch_all_accounts, fetch_single_account,
+    ACCOUNTS, fetch_all_accounts, fetch_single_account,
     get_actions_value, LEAD_ACTION_TYPES, fetch_trend_data,
 )
 
@@ -196,6 +196,9 @@ async def trend_debug(_=Depends(admin_only)):
     """Debug endpoint — returns raw Meta API response so we can see what's happening."""
     import requests, json
     from datetime import date, timedelta
+    import meta_api as _ma
+    # Get BASE_URL from meta_api module directly
+    base_url = getattr(_ma, "BASE_URL", "https://graph.facebook.com/v19.0")
     until = date.today()
     since = until - timedelta(days=7)
     out = []
@@ -210,12 +213,12 @@ async def trend_debug(_=Depends(admin_only)):
             "time_range":     json.dumps({"since": since.strftime("%Y-%m-%d"), "until": until.strftime("%Y-%m-%d")}),
             "access_token":   token,
         }
-        resp = requests.get(f"{BASE_URL}/{acc_id}/insights", params=params, timeout=30)
+        resp = requests.get(f"{base_url}/{acc_id}/insights", params=params, timeout=30)
         out.append({
-            "label":        label,
-            "acc_id":       acc_id,
-            "token_prefix": (token[:15] + "...") if token else "EMPTY",
-            "http_status":  resp.status_code,
+            "label":         label,
+            "acc_id":        acc_id,
+            "token_prefix":  (token[:15] + "...") if token else "EMPTY",
+            "http_status":   resp.status_code,
             "meta_response": resp.json(),
         })
     return out
