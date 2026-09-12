@@ -261,7 +261,7 @@ async def fetch_trend_data(days: int = 30):
             "since": since.strftime("%Y-%m-%d"),
             "until": until.strftime("%Y-%m-%d"),
             "level": "account",
-            "access_token": acc["token"],
+            "access_token": acc.get("token") or acc.get("access_token") or acc.get("TOKEN") or "",
         }
         try:
             resp = requests.get(
