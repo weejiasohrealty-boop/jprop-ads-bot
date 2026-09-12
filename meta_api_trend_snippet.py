@@ -1,11 +1,11 @@
 # ─────────────────────────────────────────────────────────────────
-# REPLACE the fetch_trend_data function in meta_api.py with this.
-# (Delete the old version first, then paste this at the bottom.)
+# REPLACE the fetch_trend_data function at the bottom of meta_api.py
+# with this version. Delete the old one first.
 # ─────────────────────────────────────────────────────────────────
 
 async def fetch_trend_data(days: int = 30):
     """Fetch day-by-day campaign insights for the Trends tab."""
-    import requests, json
+    import json
     from datetime import date, timedelta
 
     until = date.today()
@@ -23,29 +23,31 @@ async def fetch_trend_data(days: int = 30):
         "actions",
     ])
 
-    results = []
-    for acc in ACCOUNTS:
-        token  = acc.get("token") or acc.get("access_token") or acc.get("TOKEN") or ""
-        acc_id = acc.get("id")    or acc.get("account_id")   or ""
-        label  = acc.get("label", acc_id)
+    async def _fetch_one(session, acc):
+        try:
+            token = get_token(acc["token_key"])   # ← correct: uses token_key + env var
+        except RuntimeError as e:
+            return {"label": acc["label"], "data": [], "error": {"message": str(e)}}
 
+        acc_id = acc["id"]
         params = {
             "fields":         TREND_FIELDS,
             "time_increment": 1,
             "level":          "campaign",
-            # Meta requires time_range as a JSON string — not separate since/until params
-            "time_range":     json.dumps({
-                                  "since": since.strftime("%Y-%m-%d"),
-                                  "until": until.strftime("%Y-%m-%d"),
-                              }),
+            "time_range":     json.dumps({           # ← Meta requires JSON string for date range
+                "since": since.strftime("%Y-%m-%d"),
+                "until": until.strftime("%Y-%m-%d"),
+            }),
             "access_token":   token,
+            "limit":          500,
+        }
+        result = await _get(session, f"{GRAPH_API}/{acc_id}/insights", params)  # ← correct: GRAPH_API
+        return {
+            "label": acc["label"],
+            "data":  result.get("data", []),
+            "error": result.get("error"),
         }
 
-        resp    = requests.get(f"{BASE_URL}/{acc_id}/insights", params=params, timeout=60)
-        payload = resp.json()
-        data    = payload.get("data", [])
-        error   = payload.get("error")
-
-        results.append({"label": label, "data": data, "error": error})
-
-    return results
+    async with aiohttp.ClientSession() as session:   # ← correct: uses aiohttp like the rest of the file
+        tasks = [_fetch_one(session, acc) for acc in ACCOUNTS]
+        return list(await asyncio.gather(*tasks))
