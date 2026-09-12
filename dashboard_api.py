@@ -20,7 +20,7 @@ from db import (
 )
 from meta_api import (
     ACCOUNTS, fetch_all_accounts, fetch_single_account,
-    get_actions_value, LEAD_ACTION_TYPES,
+    get_actions_value, LEAD_ACTION_TYPES, fetch_trend_data,
 )
 
 WHATSAPP_ACTION_TYPES = {"onsite_conversion.messaging_conversation_started_7d"}
@@ -190,6 +190,33 @@ def save_profit(req: ProfitReq, _=Depends(admin_only)):
 @app.get("/api/admin/profits")
 def all_profits(_=Depends(admin_only)):
     return list_profits()
+
+@app.get("/api/admin/trend")
+async def campaign_trend(days: int = 30, _=Depends(admin_only)):
+    """Returns raw per-account per-day rows. Frontend aggregates/filters."""
+    results = await fetch_trend_data(days)
+    out = []
+    for r in results:
+        label = r.get("label", "")
+        for d in (r.get("data") or []):
+            dk = d.get("date_start", "")
+            if not dk:
+                continue
+            sp  = float(d.get("spend", 0))
+            ld  = get_actions_value(d.get("actions") or [], LEAD_ACTION_TYPES)
+            msg = get_actions_value(d.get("actions") or [], WHATSAPP_ACTION_TYPES)
+            out.append({
+                "date":          dk,
+                "account_label": label,
+                "spend":         round(sp, 2),
+                "leads":         int(ld),
+                "messages":      int(msg),
+                "cpm":           round(float(d["cpm"]), 2) if d.get("cpm") else 0,
+                "ctr":           round(float(d["inline_link_click_ctr"]), 2) if d.get("inline_link_click_ctr") else 0,
+                "frequency":     round(float(d["frequency"]), 2) if d.get("frequency") else 0,
+            })
+    out.sort(key=lambda x: (x["date"], x["account_label"]))
+    return out
 
 @app.get("/api/dashboard")
 async def investor_dashboard(preset: str = "last_week_sun_sat", user=Depends(current_user)):
