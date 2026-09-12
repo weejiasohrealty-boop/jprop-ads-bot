@@ -1,11 +1,11 @@
 # ─────────────────────────────────────────────────────────────────
 # REPLACE the fetch_trend_data function in meta_api.py with this.
-# (If you had a previous version, delete it first and paste this.)
+# (Delete the old version first, then paste this at the bottom.)
 # ─────────────────────────────────────────────────────────────────
 
 async def fetch_trend_data(days: int = 30):
     """Fetch day-by-day campaign insights for the Trends tab."""
-    import requests
+    import requests, json
     from datetime import date, timedelta
 
     until = date.today()
@@ -31,18 +31,20 @@ async def fetch_trend_data(days: int = 30):
 
         params = {
             "fields":         TREND_FIELDS,
-            "time_increment": 1,          # daily breakdown
-            "level":          "campaign", # same level your Overview uses
-            "since":          since.strftime("%Y-%m-%d"),
-            "until":          until.strftime("%Y-%m-%d"),
+            "time_increment": 1,
+            "level":          "campaign",
+            # Meta requires time_range as a JSON string — not separate since/until params
+            "time_range":     json.dumps({
+                                  "since": since.strftime("%Y-%m-%d"),
+                                  "until": until.strftime("%Y-%m-%d"),
+                              }),
             "access_token":   token,
         }
 
-        # Do NOT silently catch — let real errors surface
         resp    = requests.get(f"{BASE_URL}/{acc_id}/insights", params=params, timeout=60)
         payload = resp.json()
         data    = payload.get("data", [])
-        error   = payload.get("error")  # e.g. {"message": "...", "type": "OAuthException"}
+        error   = payload.get("error")
 
         results.append({"label": label, "data": data, "error": error})
 
