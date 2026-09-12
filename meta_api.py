@@ -252,25 +252,27 @@ async def fetch_trend_data(days: int = 30):
     from datetime import date, timedelta
     until = date.today()
     since = until - timedelta(days=days)
-    TREND_FIELDS = "date_start,spend,impressions,cpm,inline_link_click_ctr,frequency,actions"
+    TREND_FIELDS = "date_start,campaign_id,campaign_name,spend,impressions,cpm,inline_link_click_ctr,frequency,actions"
     results = []
     for acc in ACCOUNTS:
+        token = (acc.get("token") or acc.get("access_token") or "")
+        acc_id = (acc.get("id") or acc.get("account_id") or "")
         params = {
-            "fields": TREND_FIELDS,
+            "fields":         TREND_FIELDS,
             "time_increment": 1,
-            "since": since.strftime("%Y-%m-%d"),
-            "until": until.strftime("%Y-%m-%d"),
-            "level": "account",
-            "access_token": acc.get("token") or acc.get("access_token") or acc.get("TOKEN") or "",
+            "level":          "campaign",
+            "since":          since.strftime("%Y-%m-%d"),
+            "until":          until.strftime("%Y-%m-%d"),
+            "access_token":   token,
         }
         try:
             resp = requests.get(
-                f"{BASE_URL}/{acc['id']}/insights",
+                f"{BASE_URL}/{acc_id}/insights",
                 params=params,
                 timeout=60
             )
             data = resp.json().get("data", [])
         except Exception:
             data = []
-        results.append({"label": acc["label"], "data": data})
+        results.append({"label": acc.get("label", acc_id), "data": data})
     return results
