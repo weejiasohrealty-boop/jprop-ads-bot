@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>JPROP &mdash; Admin Portal</title>
 <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,wght@0,300;1,300&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/echarts-countries-js@1.0.6/echarts-countries-js/Malaysia.js"></script>
 <style>
 :root{--ink:#0a0a0a;--paper:#f7f5f0;--muted:rgba(247,245,240,0.45);--line:rgba(247,245,240,0.09);--gold:#b08d3e;--green:#4caf82;--red:#e05555;--yellow:#e0b755;--blue:#5b8dee;--surface:rgba(247,245,240,0.03);}
 *{margin:0;padding:0;box-sizing:border-box;}
@@ -259,8 +261,8 @@ tr:hover td{background:rgba(247,245,240,0.02);}
     <!-- Map + KPI cards -->
     <div style="display:flex;gap:32px;flex-wrap:wrap;align-items:flex-start;margin-bottom:36px;">
       <div style="flex-shrink:0;position:relative;width:100%;max-width:870px;">
-        <div class="map-tooltip" id="rmap-tooltip"></div>
-        <svg id="rmap-svg" viewBox="0 0 870 395" style="display:block;width:100%;height:auto;">
+        <div id="rmap-echarts" style="width:100%;height:440px;"></div>
+        <svg id="rmap-svg" viewBox="0 0 870 395" style="display:none;">
           <!-- ══ PENINSULAR MALAYSIA ══  (scale: x=10+(lon-99.5)*44, y=8+(6.85-lat)*65) -->
           <g fill="rgba(176,141,62,0.12)" stroke="rgba(176,141,62,0.5)" stroke-width="1.2" stroke-linejoin="round">
             <!-- Main outline - traced from real geographic coords -->
@@ -1114,16 +1116,16 @@ document.getElementById('claude-modal').addEventListener('click', function(e){ i
 var regionTabPreset = 'last_week_sun_sat';
 var regionCampaigns = [];
 
-// Region pin positions in the 870x395 SVG coordinate space
-// x = 10+(lon-99.5)*44  y = 8+(6.85-lat)*65  (Peninsular)
-var REGION_SVG_POS = {
-  'Penang':        {cx:36,  cy:104},  // 100.33°E 5.37°N
-  'JB CIQ':        {cx:197, cy:365},  // 103.77°E 1.46°N
-  'Petaling Jaya': {cx:78,  cy:218},  // 101.6°E  3.11°N
-  'Bukit Jalil':   {cx:80,  cy:228},  // 101.68°E 2.97°N
-  'KLCC':          {cx:82,  cy:215},  // 101.71°E 3.16°N
-  'Bangsar':       {cx:79,  cy:220}   // 101.67°E 3.13°N
+// Region real-world coordinates [longitude, latitude]
+var REGION_COORDS = {
+  'Penang':        [100.3327, 5.4141],
+  'JB CIQ':        [103.7618, 1.4854],
+  'Petaling Jaya': [101.6069, 3.1073],
+  'Bukit Jalil':   [101.6841, 3.0587],
+  'KLCC':          [101.7120, 3.1579],
+  'Bangsar':       [101.6748, 3.1319]
 };
+var echartsRegionMap = null;
 
 function setRegionPreset(p, btn) {
   regionTabPreset = p;
@@ -1259,10 +1261,10 @@ function assignRegion(cid, region) {
 }
 
 function renderRegionMap() {
-  var svgG = document.getElementById('rmap-regions');
-  if (!svgG) return;
-  svgG.innerHTML = '';
-  // Compute stats from regionCampaigns (or enrichedCampaigns if region tab not loaded)
+  var dom = document.getElementById('rmap-echarts');
+  if (!dom) return;
+
+  // Compute stats
   var src = regionCampaigns.length ? regionCampaigns : enrichedCampaigns;
   var stats = {};
   REGIONS.forEach(function(r){ stats[r] = {spend:0, leads:0, closings:0, commission:0, count:0}; });
@@ -1275,56 +1277,87 @@ function renderRegionMap() {
       stats[c.region].count      += 1;
     }
   });
-  var maxSpend = 1;
-  REGIONS.forEach(function(r){ if(stats[r].spend > maxSpend) maxSpend = stats[r].spend; });
 
-  REGIONS.forEach(function(r) {
+  // Build scatter data
+  var seriesData = REGIONS.map(function(r) {
     var s = stats[r];
-    var pos = REGION_SVG_POS[r];
-    if (!pos) return;
-    var radius = s.spend > 0 ? Math.max(9, Math.round(24 * Math.sqrt(s.spend/maxSpend))) : 5;
-    var roi = s.spend && s.commission ? s.commission/s.spend : 0;
-    var fill = s.spend === 0 ? 'rgba(247,245,240,0.06)' :
-               roi >= 2 ? 'rgba(76,175,130,0.5)' :
-               roi >= 1 ? 'rgba(224,183,85,0.5)' : 'rgba(224,85,85,0.45)';
-    var stroke = regionColor(r);
+    var coords = REGION_COORDS[r];
+    if (!coords || s.spend === 0) return null;
+    var roi = s.spend && s.commission ? Math.round(s.commission/s.spend*100)/100 : 0;
+    var cpl = s.leads ? Math.round(s.spend/s.leads*100)/100 : 0;
+    var col = regionColor(r);
+    return {
+      name: r,
+      value: [coords[0], coords[1], s.spend],
+      itemStyle: { color: col, opacity: 0.85, borderColor: col, borderWidth: 2 },
+      _spend: s.spend, _leads: s.leads, _cpl: cpl,
+      _closings: s.closings, _commission: s.commission, _roi: roi, _count: s.count
+    };
+  }).filter(Boolean);
 
-    // Outer glow ring
-    var glow = document.createElementNS('http://www.w3.org/2000/svg','circle');
-    glow.setAttribute('cx', pos.cx); glow.setAttribute('cy', pos.cy);
-    glow.setAttribute('r', radius+4);
-    glow.setAttribute('fill', 'none');
-    glow.setAttribute('stroke', stroke);
-    glow.setAttribute('stroke-width', '1');
-    glow.setAttribute('opacity', '0.3');
-    svgG.appendChild(glow);
+  var maxSpend = Math.max.apply(null, seriesData.map(function(d){ return d._spend; })) || 1;
 
-    // Main circle
-    var c2 = document.createElementNS('http://www.w3.org/2000/svg','circle');
-    c2.setAttribute('cx', pos.cx); c2.setAttribute('cy', pos.cy); c2.setAttribute('r', radius);
-    c2.setAttribute('fill', fill); c2.setAttribute('stroke', stroke); c2.setAttribute('stroke-width', '1.5');
-    c2.style.cursor = 'default';
-    // Tooltip
-    c2.addEventListener('mouseenter', function() {
-      var tip = document.getElementById('rmap-tooltip');
-      var roi2 = s.spend && s.commission ? Math.round(s.commission/s.spend*100)/100 : 0;
-      var cpl2 = s.leads ? Math.round(s.spend/s.leads*100)/100 : 0;
-      tip.innerHTML = '<b>'+r+'</b><br>Spend: RM '+(s.spend?s.spend.toLocaleString():'—')+'<br>Leads: '+(s.leads||'—')+'<br>CPL: '+(cpl2?'RM '+cpl2:'—')+'<br>Closings: '+(s.closings||'—')+'<br>ROI: '+(roi2?roi2+'x':'—');
-      tip.style.display = 'block';
-      tip.style.left = (pos.cx + 18) + 'px';
-      tip.style.top  = Math.max(0, pos.cy - 20) + 'px';
-    });
-    c2.addEventListener('mouseleave', function(){ document.getElementById('rmap-tooltip').style.display='none'; });
-    svgG.appendChild(c2);
+  if (!echartsRegionMap) {
+    echartsRegionMap = echarts.init(dom, null, {renderer: 'canvas'});
+    window.addEventListener('resize', function(){ if(echartsRegionMap) echartsRegionMap.resize(); });
+  }
 
-    // Label
-    var lbl = document.createElementNS('http://www.w3.org/2000/svg','text');
-    lbl.setAttribute('x', pos.cx); lbl.setAttribute('y', pos.cy + radius + 10);
-    lbl.setAttribute('text-anchor','middle'); lbl.setAttribute('fill', stroke);
-    lbl.setAttribute('font-size','7'); lbl.setAttribute('font-family','Inter,sans-serif');
-    lbl.textContent = r;
-    svgG.appendChild(lbl);
-  });
+  echartsRegionMap.setOption({
+    backgroundColor: 'transparent',
+    tooltip: {
+      trigger: 'item',
+      backgroundColor: 'rgba(10,10,10,0.92)',
+      borderColor: 'rgba(176,141,62,0.4)',
+      borderWidth: 1,
+      textStyle: { color: '#f7f5f0', fontFamily: 'Inter', fontSize: 12, fontWeight: 300 },
+      formatter: function(p) {
+        var d = p.data;
+        return '<b style="font-size:13px;">' + p.name + '</b><br/>' +
+          '<span style="color:rgba(247,245,240,0.5);">Spend</span>  <b style="color:#b08d3e;">RM ' + (d._spend ? d._spend.toLocaleString() : '—') + '</b><br/>' +
+          '<span style="color:rgba(247,245,240,0.5);">Leads</span>  ' + (d._leads || '—') + '<br/>' +
+          '<span style="color:rgba(247,245,240,0.5);">CPL</span>    ' + (d._cpl ? 'RM ' + d._cpl : '—') + '<br/>' +
+          '<span style="color:rgba(247,245,240,0.5);">Closings</span> ' + (d._closings || '—') + '<br/>' +
+          '<span style="color:rgba(247,245,240,0.5);">ROI</span>    ' + (d._roi ? d._roi + 'x' : '—') + '<br/>' +
+          '<span style="color:rgba(247,245,240,0.5);">Campaigns</span> ' + d._count;
+      }
+    },
+    geo: {
+      map: 'Malaysia',
+      roam: true,
+      zoom: 1.05,
+      center: [109.5, 4.0],
+      label: { show: false },
+      itemStyle: {
+        areaColor: 'rgba(176,141,62,0.07)',
+        borderColor: 'rgba(176,141,62,0.45)',
+        borderWidth: 1
+      },
+      emphasis: {
+        itemStyle: { areaColor: 'rgba(176,141,62,0.18)' },
+        label: { show: false }
+      }
+    },
+    series: [{
+      type: 'effectScatter',
+      coordinateSystem: 'geo',
+      data: seriesData,
+      symbolSize: function(val) {
+        return Math.max(14, Math.round(48 * Math.sqrt(val[2] / maxSpend)));
+      },
+      rippleEffect: { brushType: 'stroke', scale: 2.5, period: 4 },
+      label: {
+        show: true,
+        position: 'bottom',
+        distance: 6,
+        formatter: function(p) { return p.name; },
+        color: 'rgba(247,245,240,0.7)',
+        fontFamily: 'Inter',
+        fontSize: 11,
+        fontWeight: 300
+      },
+      emphasis: { scale: true }
+    }]
+  }, true);
 }
 
 // Region helpers
