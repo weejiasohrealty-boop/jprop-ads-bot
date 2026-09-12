@@ -7,6 +7,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,wght@0,300;1,300&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
 :root{--ink:#0a0a0a;--paper:#f7f5f0;--muted:rgba(247,245,240,0.45);--line:rgba(247,245,240,0.09);--gold:#b08d3e;--green:#4caf82;--red:#e05555;--yellow:#e0b755;--blue:#5b8dee;--surface:rgba(247,245,240,0.03);}
 *{margin:0;padding:0;box-sizing:border-box;}
@@ -169,6 +170,7 @@ tr:hover td{background:rgba(247,245,240,0.02);}
     <button class="tab-btn" onclick="switchTab('profit',this)">Profit Entry</button>
     <button class="tab-btn" onclick="switchTab('investors',this)">Investors</button>
     <button class="tab-btn" onclick="switchTab('assign',this)">Assignments</button>
+    <button class="tab-btn" onclick="switchTab('trends',this)">Trends</button>
   </div>
 
   <!-- OVERVIEW TAB -->
@@ -382,6 +384,50 @@ tr:hover td{background:rgba(247,245,240,0.02);}
       </div>
     </div>
   </div>
+
+  <!-- TRENDS TAB -->
+  <div id="tab-trends" class="tab-panel">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
+      <button class="preset-btn active" onclick="setTrendDays(30,this)">30 Days</button>
+      <button class="preset-btn" onclick="setTrendDays(60,this)">60 Days</button>
+      <button class="preset-btn" onclick="setTrendDays(90,this)">90 Days</button>
+      <button class="refresh-btn" onclick="loadTrendsTab()" style="margin-left:8px;">&#8635; Refresh</button>
+    </div>
+    <div id="trend-account-filters" style="display:flex;gap:6px;margin-bottom:24px;flex-wrap:wrap;"></div>
+    <div id="trend-loading" style="text-align:center;padding:80px;color:var(--muted);font-size:13px;font-style:italic;">Loading trend data&#8230;</div>
+    <div id="trend-content" style="display:none;">
+      <!-- Hero: CPM -->
+      <div style="background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:20px 24px;margin-bottom:20px;">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:12px;">
+          <div>
+            <div style="font-family:'Newsreader',serif;font-size:20px;font-weight:300;font-style:italic;margin-bottom:3px;">CPM by day</div>
+            <div style="font-size:11px;color:var(--muted);">Cost per 1,000 impressions — Meta market pricing indicator</div>
+          </div>
+          <div id="trend-cpm-avg" style="text-align:right;"></div>
+        </div>
+        <canvas id="chart-cpm" height="80"></canvas>
+      </div>
+      <!-- 2×2 grid -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+        <div style="background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:18px 20px;">
+          <div style="font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:12px;">Spend / Day (RM)</div>
+          <canvas id="chart-spend" height="110"></canvas>
+        </div>
+        <div style="background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:18px 20px;">
+          <div style="font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:12px;">Leads &amp; Messages / Day</div>
+          <canvas id="chart-results" height="110"></canvas>
+        </div>
+        <div style="background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:18px 20px;">
+          <div style="font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:12px;">Link CTR / Day</div>
+          <canvas id="chart-ctr" height="110"></canvas>
+        </div>
+        <div style="background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:18px 20px;">
+          <div style="font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:12px;">Frequency / Day</div>
+          <canvas id="chart-freq" height="110"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- Claude Modal -->
@@ -516,6 +562,7 @@ function switchTab(name, btn) {
   if (name === 'profit')    loadProfitTab();
   if (name === 'investors') loadInvestors();
   if (name === 'assign')    loadAssignTab();
+  if (name === 'trends')    loadTrendsTab();
 }
 
 // Preset
@@ -1330,6 +1377,171 @@ function renderMap() {
 
 function escHtml(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function escAttr(s) { return String(s||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'"); }
+
+// ── Trends Tab ──
+var trendDays        = 30;
+var trendCharts      = {};
+var trendRawData     = [];
+var trendAccFilter   = '__all__';
+
+function setTrendDays(days, btn) {
+  trendDays = days;
+  document.querySelectorAll('#tab-trends .preset-btn').forEach(function(b){ b.classList.remove('active'); });
+  btn.classList.add('active');
+  loadTrendsTab();
+}
+
+function setTrendAccount(acc, btn) {
+  trendAccFilter = acc;
+  document.querySelectorAll('#trend-account-filters .filter-btn').forEach(function(b){ b.classList.remove('active'); });
+  btn.classList.add('active');
+  renderTrendCharts(aggregateTrendData(trendRawData, trendAccFilter));
+}
+
+function aggregateTrendData(rows, accFilter) {
+  var filtered = accFilter === '__all__' ? rows : rows.filter(function(r){ return r.account_label === accFilter; });
+  var byDate = {};
+  filtered.forEach(function(d) {
+    var dk = d.date;
+    if (!byDate[dk]) byDate[dk] = {date:dk, spend:0, leads:0, messages:0, cpm_sum:0, cpm_n:0, ctr_sum:0, ctr_n:0, freq_sum:0, freq_n:0};
+    var e = byDate[dk];
+    e.spend    += d.spend || 0;
+    e.leads    += d.leads || 0;
+    e.messages += d.messages || 0;
+    if (d.cpm)       { e.cpm_sum  += d.cpm;       e.cpm_n++;  }
+    if (d.ctr)       { e.ctr_sum  += d.ctr;       e.ctr_n++;  }
+    if (d.frequency) { e.freq_sum += d.frequency; e.freq_n++; }
+  });
+  return Object.keys(byDate).sort().map(function(dk) {
+    var e = byDate[dk];
+    return {
+      date:      dk,
+      spend:     Math.round(e.spend * 100) / 100,
+      leads:     e.leads,
+      messages:  e.messages,
+      cpm:       e.cpm_n  ? Math.round(e.cpm_sum  / e.cpm_n  * 100) / 100 : 0,
+      ctr:       e.ctr_n  ? Math.round(e.ctr_sum  / e.ctr_n  * 100) / 100 : 0,
+      frequency: e.freq_n ? Math.round(e.freq_sum / e.freq_n * 100) / 100 : 0,
+    };
+  });
+}
+
+function loadTrendsTab() {
+  document.getElementById('trend-loading').style.display = 'block';
+  document.getElementById('trend-loading').textContent = 'Loading trend data…';
+  document.getElementById('trend-content').style.display = 'none';
+  document.getElementById('trend-account-filters').innerHTML = '';
+  trendAccFilter = '__all__';
+  apiFetch('/api/admin/trend?days=' + trendDays).then(function(data) {
+    trendRawData = data;
+    // Build account filter buttons
+    var accounts = [];
+    data.forEach(function(r){ if (accounts.indexOf(r.account_label) === -1) accounts.push(r.account_label); });
+    var fBar = document.getElementById('trend-account-filters');
+    var allBtn = document.createElement('button');
+    allBtn.className = 'filter-btn active';
+    allBtn.textContent = 'All Accounts';
+    allBtn.onclick = function(){ setTrendAccount('__all__', this); };
+    fBar.appendChild(allBtn);
+    accounts.forEach(function(acc) {
+      var btn = document.createElement('button');
+      btn.className = 'filter-btn';
+      btn.textContent = acc;
+      btn.onclick = function(){ setTrendAccount(acc, this); };
+      fBar.appendChild(btn);
+    });
+    document.getElementById('trend-loading').style.display = 'none';
+    document.getElementById('trend-content').style.display = 'block';
+    renderTrendCharts(aggregateTrendData(data, '__all__'));
+  }).catch(function(e) {
+    document.getElementById('trend-loading').textContent = 'Failed to load — ' + e.message;
+  });
+}
+
+function renderTrendCharts(data) {
+  if (!data || !data.length) {
+    document.getElementById('trend-loading').textContent = 'No trend data available.';
+    document.getElementById('trend-loading').style.display = 'block';
+    document.getElementById('trend-content').style.display = 'none';
+    return;
+  }
+  var labels = data.map(function(d){ return d.date ? d.date.slice(5) : ''; });
+  var cpms   = data.map(function(d){ return +(d.cpm||0); });
+  var spends = data.map(function(d){ return +(d.spend||0); });
+  var leads  = data.map(function(d){ return +(d.leads||0); });
+  var msgs   = data.map(function(d){ return +(d.messages||0); });
+  var ctrs   = data.map(function(d){ return +(d.ctr||0); });
+  var freqs  = data.map(function(d){ return +(d.frequency||0); });
+
+  var validCpms = cpms.filter(function(v){ return v>0; });
+  var avgCpm = validCpms.length ? validCpms.reduce(function(a,b){return a+b;},0)/validCpms.length : 0;
+  var maxCpm = validCpms.length ? Math.max.apply(null,validCpms) : 0;
+  var minCpm = validCpms.length ? Math.min.apply(null,validCpms) : 0;
+  document.getElementById('trend-cpm-avg').innerHTML =
+    '<div style="font-size:9px;color:var(--muted);letter-spacing:.12em;text-transform:uppercase;margin-bottom:4px;">Avg CPM</div>' +
+    '<div style="font-family:Newsreader,serif;font-size:26px;font-weight:300;color:var(--gold);">RM '+avgCpm.toFixed(2)+'</div>' +
+    '<div style="font-size:10px;color:var(--muted);margin-top:2px;">Low RM '+minCpm.toFixed(2)+' · High RM '+maxCpm.toFixed(2)+'</div>';
+
+  var grid = { color:'rgba(247,245,240,0.05)' };
+  var tickStyle = { color:'#555', font:{ size:10 } };
+  var tooltipBase = { mode:'index', intersect:false, backgroundColor:'#1a1a1a', borderColor:'rgba(247,245,240,0.1)', borderWidth:1, titleColor:'#f7f5f0', bodyColor:'#94a3b8', padding:10 };
+
+  function destroy(k) { if (trendCharts[k]) { trendCharts[k].destroy(); delete trendCharts[k]; } }
+  function baseOpts(yFmt, tooltipFmt) {
+    return {
+      responsive:true, animation:false,
+      plugins:{ legend:{ display:false }, tooltip: Object.assign({}, tooltipBase, { callbacks:{ label: tooltipFmt } }) },
+      scales:{ x:{ grid:grid, ticks: Object.assign({}, tickStyle, { maxTicksLimit:10 }) }, y:{ grid:grid, ticks: Object.assign({}, tickStyle, { callback: yFmt }) } }
+    };
+  }
+
+  // CPM hero
+  destroy('cpm');
+  trendCharts['cpm'] = new Chart(document.getElementById('chart-cpm'), {
+    type:'line',
+    data:{ labels:labels, datasets:[{ data:cpms, borderColor:'#b08d3e', backgroundColor:'rgba(176,141,62,0.08)', borderWidth:2, fill:true, tension:0.35, pointRadius:0, pointHoverRadius:4 }] },
+    options: baseOpts(function(v){ return 'RM '+v.toFixed(1); }, function(ctx){ return 'RM '+ctx.parsed.y.toFixed(2); })
+  });
+
+  // Spend
+  destroy('spend');
+  trendCharts['spend'] = new Chart(document.getElementById('chart-spend'), {
+    type:'bar',
+    data:{ labels:labels, datasets:[{ data:spends, backgroundColor:'rgba(176,141,62,0.35)', borderColor:'#b08d3e', borderWidth:1 }] },
+    options: baseOpts(function(v){ return 'RM'+v.toFixed(0); }, function(ctx){ return 'RM '+ctx.parsed.y.toFixed(0); })
+  });
+
+  // Leads + Messages
+  destroy('results');
+  trendCharts['results'] = new Chart(document.getElementById('chart-results'), {
+    type:'line',
+    data:{ labels:labels, datasets:[
+      { label:'Leads',    data:leads, borderColor:'#5b8dee', backgroundColor:'rgba(91,141,238,0.08)', borderWidth:1.5, fill:true, tension:0.35, pointRadius:0, pointHoverRadius:3 },
+      { label:'Messages', data:msgs,  borderColor:'#a855f7', backgroundColor:'rgba(168,85,247,0.06)', borderWidth:1.5, fill:true, tension:0.35, pointRadius:0, pointHoverRadius:3 }
+    ] },
+    options: (function(){
+      var o = baseOpts(function(v){ return v; }, function(ctx){ return ctx.dataset.label+': '+ctx.parsed.y; });
+      o.plugins.legend = { display:true, labels:{ color:'#888', font:{size:10}, boxWidth:12 } };
+      return o;
+    })()
+  });
+
+  // CTR
+  destroy('ctr');
+  trendCharts['ctr'] = new Chart(document.getElementById('chart-ctr'), {
+    type:'line',
+    data:{ labels:labels, datasets:[{ data:ctrs, borderColor:'#4caf82', backgroundColor:'rgba(76,175,130,0.07)', borderWidth:1.5, fill:true, tension:0.35, pointRadius:0, pointHoverRadius:3 }] },
+    options: baseOpts(function(v){ return v+'%'; }, function(ctx){ return ctx.parsed.y.toFixed(2)+'%'; })
+  });
+
+  // Frequency
+  destroy('freq');
+  trendCharts['freq'] = new Chart(document.getElementById('chart-freq'), {
+    type:'line',
+    data:{ labels:labels, datasets:[{ data:freqs, borderColor:'#e0b755', backgroundColor:'rgba(224,183,85,0.07)', borderWidth:1.5, fill:true, tension:0.35, pointRadius:0, pointHoverRadius:3 }] },
+    options: baseOpts(function(v){ return v+'x'; }, function(ctx){ return ctx.parsed.y.toFixed(2)+'x'; })
+  });
+}
 </script>
 </body>
 </html>
