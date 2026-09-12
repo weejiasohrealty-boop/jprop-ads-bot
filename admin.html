@@ -231,7 +231,7 @@ tr:hover td{background:rgba(247,245,240,0.02);}
             <th class="r" data-sort="spend" onclick="sortBy('spend')">Spend <span class="sort-arrow">&#8597;</span></th>
             <th class="r" data-sort="leads" onclick="sortBy('leads')">Leads <span class="sort-arrow">&#8597;</span></th>
             <th class="r" data-sort="messages" onclick="sortBy('messages')">Messages <span class="sort-arrow">&#8597;</span></th>
-            <th class="r" data-sort="cpl" onclick="sortBy('cpl')">CPL <span class="sort-arrow">&#8597;</span></th>
+            <th class="r" data-sort="cpl" onclick="sortBy('cpl')">CPL / Cost/Msg <span class="sort-arrow">&#8597;</span></th>
             <th class="r" data-sort="cpm" onclick="sortBy('cpm')">CPM <span class="sort-arrow">&#8597;</span></th>
             <th class="r" data-sort="hook_pct" onclick="sortBy('hook_pct')">Hook% <span class="sort-arrow">&#8597;</span></th>
             <th class="r" data-sort="ctr" onclick="sortBy('ctr')">CTR <span class="sort-arrow">&#8597;</span></th>
@@ -653,6 +653,13 @@ function renderTable() {
         '<td colspan="6"></td>' +
         '</tr>';
     }
+    // Detect campaign type
+    var isLeadForm   = (c.leads || 0) > 0;
+    var isEngagement = (c.messages || 0) > 0 && !isLeadForm;
+    var costPerMsg   = isEngagement && c.spend ? Math.round(c.spend / c.messages * 100) / 100 : 0;
+    var leadsCell    = isLeadForm   ? c.leads    : '<span style="color:var(--muted)">&mdash;</span>';
+    var msgCell      = isEngagement ? c.messages : '<span style="color:var(--muted)">&mdash;</span>';
+    var costCell     = isLeadForm ? cplBadge(c.cpl) : (isEngagement ? cplBadge(costPerMsg) : '<span style="color:var(--muted)">&mdash;</span>');
     rows += '<tr>' +
       '<td><div class="camp-name">' + escHtml(c.campaign_name) + '</div></td>' +
       '<td style="color:var(--muted);font-size:11px;">' + escHtml(c.account_label||'') + '</td>' +
@@ -660,9 +667,9 @@ function renderTable() {
       '<td>' + statusBadge(c.effective_status) + '</td>' +
       '<td class="r" style="color:var(--muted);">' + (c.daily_budget ? 'RM '+Math.round(c.daily_budget) : '&mdash;') + '</td>' +
       '<td class="r gold-val">' + rm(c.spend) + '</td>' +
-      '<td class="r">' + (c.leads ? c.leads : '<span style="color:var(--muted)">&mdash;</span>') + '</td>' +
-      '<td class="r" style="color:var(--muted);">' + (c.messages ? c.messages : '&mdash;') + '</td>' +
-      '<td class="r">' + cplBadge(c.cpl) + '</td>' +
+      '<td class="r">' + leadsCell + '</td>' +
+      '<td class="r" style="color:var(--muted);">' + msgCell + '</td>' +
+      '<td class="r">' + costCell + '</td>' +
       '<td class="r" style="color:var(--muted);">' + (c.cpm ? 'RM '+c.cpm : '&mdash;') + '</td>' +
       '<td class="r" style="color:var(--muted);">' + (c.hook_pct ? c.hook_pct+'%' : '&mdash;') + '</td>' +
       '<td class="r" style="color:var(--muted);">' + (c.ctr ? c.ctr+'%' : '&mdash;') + '</td>' +
