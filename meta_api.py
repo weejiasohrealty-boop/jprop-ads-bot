@@ -246,3 +246,23 @@ async def fetch_all_accounts_adset(preset: str) -> list:
 async def fetch_single_account(idx: int, preset: str) -> dict:
     async with aiohttp.ClientSession() as session:
         return await _fetch_account(session, ACCOUNTS[idx], preset)
+
+async def fetch_trend_data(days: int = 30):
+    from datetime import date, timedelta
+    until = date.today()
+    since = until - timedelta(days=days)
+    TREND_FIELDS = "date_start,spend,impressions,cpm,inline_link_click_ctr,frequency,actions"
+    results = []
+    async with httpx.AsyncClient(timeout=60) as client:
+        for acc in ACCOUNTS:
+            params = {
+                "fields": TREND_FIELDS,
+                "time_increment": 1,
+                "since": since.strftime("%Y-%m-%d"),
+                "until": until.strftime("%Y-%m-%d"),
+                "level": "account",
+                "access_token": acc["token"],
+            }
+            resp = await client.get(f"{BASE_URL}/{acc['id']}/insights", params=params)
+            results.append({"label": acc["label"], "data": resp.json().get("data", [])})
+    return results
