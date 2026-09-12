@@ -248,6 +248,7 @@ async def fetch_single_account(idx: int, preset: str) -> dict:
         return await _fetch_account(session, ACCOUNTS[idx], preset)
 
 async def fetch_trend_data(days: int = 30):
+    import httpx                          # ← ADD THIS LINE
     from datetime import date, timedelta
     until = date.today()
     since = until - timedelta(days=days)
