@@ -198,6 +198,16 @@ async def campaign_trend(days: int = 30, _=Depends(admin_only)):
         results = await fetch_trend_data(days)
     except Exception as e:
         raise HTTPException(500, f"fetch_trend_data failed: {e}")
+
+    # Collect any Meta API errors so the frontend can display them
+    api_errors = []
+    for r in results:
+        if r.get("error"):
+            api_errors.append(f"{r.get('label','?')}: {r['error'].get('message', r['error'])}")
+
+    if api_errors:
+        raise HTTPException(502, "Meta API error — " + " | ".join(api_errors))
+
     out = []
     for r in results:
         label = r.get("label", "")
