@@ -1454,7 +1454,8 @@ function loadTrendsTab() {
     document.getElementById('trend-content').style.display = 'block';
     renderTrendCharts(aggregateTrendData(data, '__all__'));
   }).catch(function(e) {
-    document.getElementById('trend-loading').textContent = 'Failed to load — ' + e.message;
+    document.getElementById('trend-loading').textContent = 'Error: ' + (e.message || e);
+    document.getElementById('trend-loading').style.color = 'var(--red)';
   });
 }
 
