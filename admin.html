@@ -48,7 +48,7 @@ header{display:flex;align-items:center;justify-content:space-between;padding:18p
 .refresh-btn{background:none;border:1px solid var(--line);color:var(--muted);padding:7px 12px;font-size:12px;border-radius:4px;cursor:pointer;font-family:'Inter',sans-serif;margin-left:auto;transition:all 0.2s;}
 .refresh-btn:hover{color:var(--paper);}
 /* Map */
-#rmap-leaflet{height:440px;border-radius:8px;overflow:hidden;margin-bottom:0;}
+#rmap-leaflet{height:380px;border-radius:8px;overflow:hidden;margin-bottom:0;}
 .leaflet-popup-content-wrapper{background:#111;border:1px solid rgba(176,141,62,0.4);border-radius:8px;color:#f7f5f0;box-shadow:0 4px 20px rgba(0,0,0,0.7);}
 .leaflet-popup-tip{background:rgba(176,141,62,0.4);}
 .leaflet-popup-content{margin:12px 16px;font-family:'Inter',sans-serif;}
@@ -257,13 +257,14 @@ tr:hover td{background:rgba(247,245,240,0.02);}
       <button class="preset-btn" onclick="setRegionPreset('last_month',this)">Last Month</button>
       <button class="refresh-btn" onclick="loadRegionTab()">&#8635; Refresh</button>
     </div>
-    <!-- Map + KPI cards -->
-    <div style="margin-bottom:36px;">
-      <div id="rmap-leaflet"></div>
-    </div>
-    <!-- Region KPI cards -->
-    <div id="region-kpi-cards" style="margin-bottom:36px;">
-      <div style="color:var(--muted);font-size:12px;padding:20px 0;">Loading…</div>
+    <!-- Map + KPI cards side by side -->
+    <div style="display:flex;gap:28px;flex-wrap:wrap;align-items:flex-start;margin-bottom:36px;">
+      <div style="flex:1;min-width:300px;">
+        <div id="rmap-leaflet"></div>
+      </div>
+      <div style="flex:1;min-width:260px;max-height:440px;overflow-y:auto;" id="region-kpi-cards">
+        <div style="color:var(--muted);font-size:12px;padding:20px 0;">Loading…</div>
+      </div>
     </div>
     <!-- Region performance table -->
     <div class="section-title">Performance by Region</div>
