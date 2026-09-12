@@ -19,7 +19,7 @@ from db import (
     get_profit, set_profit, list_profits,
 )
 from meta_api import (
-    ACCOUNTS, fetch_all_accounts, fetch_single_account,
+    ACCOUNTS, BASE_URL, fetch_all_accounts, fetch_single_account,
     get_actions_value, LEAD_ACTION_TYPES, fetch_trend_data,
 )
 
@@ -190,6 +190,35 @@ def save_profit(req: ProfitReq, _=Depends(admin_only)):
 @app.get("/api/admin/profits")
 def all_profits(_=Depends(admin_only)):
     return list_profits()
+
+@app.get("/api/admin/trend-debug")
+async def trend_debug(_=Depends(admin_only)):
+    """Debug endpoint — returns raw Meta API response so we can see what's happening."""
+    import requests, json
+    from datetime import date, timedelta
+    until = date.today()
+    since = until - timedelta(days=7)
+    out = []
+    for acc in ACCOUNTS:
+        token  = acc.get("token") or acc.get("access_token") or acc.get("TOKEN") or ""
+        acc_id = acc.get("id")    or acc.get("account_id")   or ""
+        label  = acc.get("label", acc_id)
+        params = {
+            "fields":         "date_start,spend,impressions,cpm",
+            "time_increment": 1,
+            "level":          "campaign",
+            "time_range":     json.dumps({"since": since.strftime("%Y-%m-%d"), "until": until.strftime("%Y-%m-%d")}),
+            "access_token":   token,
+        }
+        resp = requests.get(f"{BASE_URL}/{acc_id}/insights", params=params, timeout=30)
+        out.append({
+            "label":        label,
+            "acc_id":       acc_id,
+            "token_prefix": (token[:15] + "...") if token else "EMPTY",
+            "http_status":  resp.status_code,
+            "meta_response": resp.json(),
+        })
+    return out
 
 @app.get("/api/admin/trend")
 async def campaign_trend(days: int = 30, _=Depends(admin_only)):
