@@ -214,7 +214,6 @@ tr:hover td{background:rgba(247,245,240,0.02);}
     <div class="kpi-row" id="ov-kpis">
       <div class="kpi hi" style="border-color:rgba(76,175,130,0.25);background:rgba(76,175,130,0.04);"><div class="kpi-label">Active Budget/day</div><div class="kpi-value green" id="ov-budget-active">&#8230;</div></div>
       <div class="kpi"><div class="kpi-label">Total Budget/day</div><div class="kpi-value" id="ov-budget">&#8230;</div></div>
-      <div class="kpi" style="border-color:rgba(139,92,246,0.3);cursor:pointer;" title="Set per-account allocation in the table below"><div class="kpi-label">Allocated/day</div><div class="kpi-value" id="ov-alloc" style="font-size:13px;">—</div></div>
       <div class="kpi hi"><div class="kpi-label">Total Spend</div><div class="kpi-value gold" id="ov-spend">&#8230;</div></div>
       <div class="kpi"><div class="kpi-label">Total Leads</div><div class="kpi-value" id="ov-leads">&#8230;</div></div>
       <div class="kpi"><div class="kpi-label">Avg CPL</div><div class="kpi-value" id="ov-cpl">&#8230;</div></div>
@@ -233,7 +232,6 @@ tr:hover td{background:rgba(247,245,240,0.02);}
             <th data-sort="region" onclick="sortBy('region')">Region <span class="sort-arrow">&#8597;</span></th>
             <th>Status</th>
             <th class="r" data-sort="daily_budget" onclick="sortBy('daily_budget')">Budget/day <span class="sort-arrow">&#8597;</span></th>
-            <th class="r" style="color:#a78bfa;" title="Click cell to set account allocation">Allocated/day</th>
             <th class="r" data-sort="spend" onclick="sortBy('spend')">Spend <span class="sort-arrow">&#8597;</span></th>
             <th class="r" data-sort="leads" onclick="sortBy('leads')">Leads <span class="sort-arrow">&#8597;</span></th>
             <th class="r" data-sort="messages" onclick="sortBy('messages')">Messages <span class="sort-arrow">&#8597;</span></th>
@@ -280,7 +278,7 @@ tr:hover td{background:rgba(247,245,240,0.02);}
           <tr>
             <th>Region</th>
             <th class="r">Campaigns</th>
-            <th class="r">Budget/day</th>
+            <th class="r">Active Budget/day</th>
             <th class="r" style="color:#a78bfa;" title="Click cell to set region allocation">Allocated/day</th>
             <th class="r">Spend</th>
             <th class="r">Leads</th>
@@ -792,14 +790,6 @@ function renderTable() {
       '<td>' + statusBadge(c.effective_status) + '</td>' +
       '<td class="r" style="color:var(--muted);">' + (c.daily_budget ? 'RM '+Math.round(c.daily_budget) : '&mdash;') + '</td>' +
       (function(){
-        var acl = allocMap[c.account_label] || 0;
-        var util = acl && c.daily_budget ? Math.round(c.daily_budget / acl * 100) : 0;
-        var uColor = util >= 90 ? '#4ade80' : util >= 60 ? 'var(--gold)' : util > 0 ? '#f87171' : 'var(--muted)';
-        return '<td class="r" data-alloc-account="'+escAttr(c.account_label)+'" style="cursor:pointer;" onclick="editAllocCell(this,\''+escAttr(c.account_label)+'\')" title="Click to set allocation for '+escAttr(c.account_label)+'">' +
-          '<span class="alloc-display" style="color:#a78bfa;font-size:12px;">'+(acl ? 'RM '+Math.round(acl) : '<span style=\'color:var(--muted)\'>— set</span>')+'</span>' +
-          (util ? '<br><span style="font-size:10px;color:'+uColor+';">'+util+'% used</span>' : '') +
-          '</td>';
-      })() +
       '<td class="r gold-val">' + rm(c.spend) + '</td>' +
       '<td class="r">' + leadsCell + '</td>' +
       '<td class="r" style="color:var(--muted);">' + msgCell + '</td>' +
@@ -1214,7 +1204,8 @@ function renderRegionPerfTable() {
   REGIONS.forEach(function(r){ stats[r] = {budget:0, spend:0, leads:0, closings:0, commission:0, cpmSum:0, cpmCount:0, count:0}; });
   regionCampaigns.forEach(function(c) {
     if (c.region && stats[c.region]) {
-      stats[c.region].budget     += c.daily_budget || 0;
+      // Only count active campaigns toward budget
+      stats[c.region].budget     += (c.effective_status === 'ACTIVE' ? (c.daily_budget || 0) : 0);
       stats[c.region].spend      += c.spend || 0;
       stats[c.region].leads      += c.leads || 0;
       stats[c.region].closings   += c.closing_sales || 0;
@@ -1254,15 +1245,21 @@ function renderRegionPerfTable() {
     var roi = s.spend && s.commission ? Math.round(s.commission/s.spend*100)/100 : 0;
     var avgCpm = s.cpmCount ? Math.round(s.cpmSum/s.cpmCount*100)/100 : 0;
     var rAlloc = regionAllocMap[r] || 0;
-    var rUtil  = rAlloc && s.budget ? Math.round(s.budget / rAlloc * 100) : 0;
-    var ruColor = rUtil >= 90 ? '#4ade80' : rUtil >= 60 ? 'var(--gold)' : rUtil > 0 ? '#f87171' : '#a78bfa';
+    var rDiff  = rAlloc ? Math.round(s.budget - rAlloc) : 0;
+    var rOver  = rDiff > 0;   // budget > allocation = over plan
+    var rUnder = rDiff < 0;   // budget < allocation = under-utilised
+    var ruColor = !rAlloc ? '#a78bfa' : rOver ? '#f87171' : rDiff === 0 ? '#4ade80' : 'var(--gold)';
+    var ruLabel = !rAlloc ? '' : rOver
+      ? '<br><span style="font-size:10px;color:#f87171;">⚠️ +RM '+rDiff+' over plan</span>'
+      : rDiff === 0 ? '<br><span style="font-size:10px;color:#4ade80;">✓ Exactly on plan</span>'
+      : '<br><span style="font-size:10px;color:var(--gold);">RM '+Math.abs(rDiff)+' under plan</span>';
     return '<tr>' +
       '<td><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:'+regionColor(r)+';margin-right:8px;vertical-align:middle;"></span>'+r+'</td>' +
       '<td class="r" style="color:var(--muted);">'+s.count+'</td>' +
       '<td class="r" style="color:var(--muted);">'+(s.budget?'RM '+Math.round(s.budget).toLocaleString():'<span style="color:var(--muted)">—</span>')+'</td>' +
       '<td class="r" style="cursor:pointer;" onclick="editRegionAlloc(this,\''+escAttr(r)+'\')" title="Click to set allocation for '+escAttr(r)+'">' +
         '<span style="color:#a78bfa;font-size:12px;">'+(rAlloc?'RM '+Math.round(rAlloc):'<span style=\'color:var(--muted)\'>— set</span>')+'</span>' +
-        (rUtil?'<br><span style="font-size:10px;color:'+ruColor+';">'+rUtil+'% used</span>':'') +
+        ruLabel +
       '</td>' +
       '<td class="r gold-val">'+(s.spend?'RM '+s.spend.toLocaleString():'<span style="color:var(--muted)">—</span>')+'</td>' +
       '<td class="r">'+(s.leads||'<span style="color:var(--muted)">—</span>')+'</td>' +
