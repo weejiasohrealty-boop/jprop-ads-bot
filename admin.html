@@ -172,6 +172,7 @@ tr:hover td{background:rgba(247,245,240,0.02);}
     <button class="tab-btn" onclick="switchTab('investors',this)">Investors</button>
     <button class="tab-btn" onclick="switchTab('assign',this)">Assignments</button>
     <button class="tab-btn" onclick="switchTab('trends',this)">Trends</button>
+    <button class="tab-btn" onclick="switchTab('budget',this)">Budget</button>
   </div>
 
   <!-- OVERVIEW TAB -->
@@ -434,6 +435,37 @@ tr:hover td{background:rgba(247,245,240,0.02);}
   </div>
 </div>
 
+<!-- Budget Tab -->
+<div id="tab-budget" class="tab-panel">
+  <div style="max-width:900px;margin:0 auto;padding:24px 0;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+      <div style="font-size:13px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);">Budget Efficiency</div>
+      <button onclick="loadBudgetTab()" style="background:var(--surface);border:1px solid var(--line);color:var(--fg);padding:6px 14px;border-radius:6px;font-size:12px;cursor:pointer;">↻ Refresh</button>
+    </div>
+
+    <!-- Summary KPI row -->
+    <div id="budget-kpis" style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px;"></div>
+
+    <!-- Per-account table -->
+    <div style="background:var(--surface);border:1px solid var(--line);border-radius:10px;overflow:hidden;">
+      <table style="width:100%;border-collapse:collapse;font-size:13px;">
+        <thead>
+          <tr style="background:rgba(255,255,255,.04);border-bottom:1px solid var(--line);">
+            <th style="padding:12px 16px;text-align:left;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:600;">Account</th>
+            <th style="padding:12px 16px;text-align:right;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:600;">Active Campaigns</th>
+            <th style="padding:12px 16px;text-align:right;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:600;">Active Budget/day</th>
+            <th style="padding:12px 16px;text-align:right;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:600;">Allocated/day</th>
+            <th style="padding:12px 16px;text-align:right;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:600;">Difference</th>
+            <th style="padding:12px 16px;text-align:right;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:600;">Utilisation</th>
+          </tr>
+        </thead>
+        <tbody id="budget-tbody"></tbody>
+      </table>
+    </div>
+    <div id="budget-empty" style="display:none;text-align:center;padding:48px;color:var(--muted);font-size:13px;">No campaign data — load the Overview tab first.</div>
+  </div>
+</div>
+
 <!-- Claude Modal -->
 <div class="modal-overlay" id="claude-modal">
   <div class="modal">
@@ -639,6 +671,7 @@ function switchTab(name, btn) {
   if (name === 'investors') loadInvestors();
   if (name === 'assign')    loadAssignTab();
   if (name === 'trends')    loadTrendsTab();
+  if (name === 'budget')    loadBudgetTab();
 }
 
 // Preset
@@ -1647,6 +1680,118 @@ function renderTrendCharts(data) {
     data:{ labels:labels, datasets:[{ data:freqs, borderColor:'#e0b755', backgroundColor:'rgba(224,183,85,0.07)', borderWidth:1.5, fill:true, tension:0.35, pointRadius:0, pointHoverRadius:3 }] },
     options: baseOpts(function(v){ return v+'x'; }, function(ctx){ return ctx.parsed.y.toFixed(2)+'x'; })
   });
+}
+
+// ─── Budget Tab ───────────────────────────────────────────────────────────────
+function loadBudgetTab() {
+  // Aggregate per-account data from allCampaigns
+  var source = enrichedCampaigns.length ? enrichedCampaigns : allCampaigns;
+  var tbody   = document.getElementById('budget-tbody');
+  var kpiEl   = document.getElementById('budget-kpis');
+  var emptyEl = document.getElementById('budget-empty');
+
+  if (!source || !source.length) {
+    tbody.innerHTML = '';
+    kpiEl.innerHTML = '';
+    emptyEl.style.display = 'block';
+    return;
+  }
+  emptyEl.style.display = 'none';
+
+  // Build emoji lookup from first campaign per label that has account_emoji
+  var emojiLookup = {};
+  source.forEach(function(c) { if (c.account_emoji && c.account_label) emojiLookup[c.account_label] = c.account_emoji; });
+
+  // Group by account_label
+  var accMap = {};
+  source.forEach(function(c) {
+    var lbl = c.account_label || 'Unknown';
+    if (!accMap[lbl]) accMap[lbl] = { label: lbl, emoji: emojiLookup[lbl] || '', activeBudget: 0, activeCnt: 0, totalCnt: 0 };
+    accMap[lbl].totalCnt++;
+    if ((c.effective_status || 'ACTIVE') === 'ACTIVE') {
+      accMap[lbl].activeCnt++;
+      accMap[lbl].activeBudget += (c.daily_budget || 0);
+    }
+  });
+
+  var rows = Object.values(accMap).sort(function(a,b){ return b.activeBudget - a.activeBudget; });
+
+  // Totals
+  var totalActive = rows.reduce(function(s,r){ return s + r.activeBudget; }, 0);
+  var totalAlloc  = rows.reduce(function(s,r){ return s + (allocMap[r.label] || 0); }, 0);
+  var totalDiff   = totalActive - totalAlloc;
+  var totalUtil   = totalAlloc > 0 ? Math.round(totalActive / totalAlloc * 100) : 0;
+  var totalActiveCnt = rows.reduce(function(s,r){ return s + r.activeCnt; }, 0);
+
+  // KPI cards
+  function kpiCard(label, val, sub, color) {
+    return '<div style="background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:16px 18px;">' +
+      '<div style="font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:8px;">'+label+'</div>' +
+      '<div style="font-family:Newsreader,serif;font-size:22px;font-weight:300;color:'+(color||'var(--gold)')+';">'+val+'</div>' +
+      (sub ? '<div style="font-size:10px;color:var(--muted);margin-top:3px;">'+sub+'</div>' : '') +
+    '</div>';
+  }
+  var diffColor = totalDiff > 0 ? 'var(--green)' : (totalDiff < 0 ? 'var(--red)' : 'var(--muted)');
+  var diffLabel = totalDiff > 0 ? '+RM '+totalDiff.toFixed(0)+' over' : (totalDiff < 0 ? 'RM '+Math.abs(totalDiff).toFixed(0)+' under' : 'On plan');
+  kpiEl.innerHTML =
+    kpiCard('Total Active Budget/day', 'RM '+totalActive.toFixed(0), totalActiveCnt+' active campaigns') +
+    kpiCard('Total Allocated/day', totalAlloc > 0 ? 'RM '+totalAlloc.toFixed(0) : '—', 'click rows below to edit') +
+    kpiCard('Difference', totalAlloc > 0 ? diffLabel : '—', null, diffColor) +
+    kpiCard('Utilisation', totalAlloc > 0 ? totalUtil+'%' : '—', 'active ÷ allocated', totalUtil >= 80 ? 'var(--green)' : (totalUtil > 0 ? 'var(--gold)' : 'var(--muted)'));
+
+  // Table rows
+  tbody.innerHTML = rows.map(function(r, i) {
+    var alloc = allocMap[r.label] || 0;
+    var diff  = alloc > 0 ? r.activeBudget - alloc : null;
+    var util  = alloc > 0 ? Math.round(r.activeBudget / alloc * 100) : null;
+
+    var diffHtml = '—';
+    if (diff !== null) {
+      if (diff > 0)       diffHtml = '<span style="color:var(--green);">+RM '+diff.toFixed(0)+' over</span>';
+      else if (diff < 0)  diffHtml = '<span style="color:var(--red);">RM '+Math.abs(diff).toFixed(0)+' under</span>';
+      else                diffHtml = '<span style="color:var(--muted);">✓ On plan</span>';
+    }
+
+    var utilHtml = '—';
+    if (util !== null) {
+      var uColor = util >= 100 ? 'var(--green)' : (util >= 60 ? 'var(--gold)' : 'var(--red)');
+      utilHtml = '<span style="color:'+uColor+';">'+util+'%</span>';
+    }
+
+    var allocDisplay = alloc > 0 ? 'RM '+alloc.toFixed(0) : '<span style="color:var(--muted);">— set</span>';
+
+    return '<tr style="border-bottom:1px solid var(--line);transition:background .15s;" onmouseover="this.style.background=\'rgba(255,255,255,.03)\'" onmouseout="this.style.background=\'\'">' +
+      '<td style="padding:12px 16px;">' +
+        (r.emoji ? '<span style="font-size:14px;margin-right:6px;">'+r.emoji+'</span>' : '') +
+        '<span style="font-weight:500;">'+escHtml(r.label)+'</span>' +
+      '</td>' +
+      '<td style="padding:12px 16px;text-align:right;color:var(--muted);">'+r.activeCnt+' / '+r.totalCnt+'</td>' +
+      '<td style="padding:12px 16px;text-align:right;font-weight:600;color:var(--gold);">'+(r.activeBudget > 0 ? 'RM '+r.activeBudget.toFixed(0) : '—')+'</td>' +
+      '<td style="padding:12px 16px;text-align:right;cursor:pointer;" id="bgt-alloc-'+i+'" onclick="editBgtAlloc(\''+escHtml(r.label)+'\','+i+')">'+allocDisplay+'</td>' +
+      '<td style="padding:12px 16px;text-align:right;">'+diffHtml+'</td>' +
+      '<td style="padding:12px 16px;text-align:right;">'+utilHtml+'</td>' +
+    '</tr>';
+  }).join('');
+}
+
+function editBgtAlloc(label, idx) {
+  var cell = document.getElementById('bgt-alloc-' + idx);
+  if (!cell) return;
+  var current = allocMap[label] || '';
+  cell.innerHTML = '<input type="number" min="0" step="50" value="'+current+'" ' +
+    'style="width:80px;background:var(--surface);border:1px solid var(--gold);color:var(--fg);padding:4px 8px;border-radius:4px;text-align:right;" ' +
+    'onblur="saveBgtAlloc(\''+label+'\','+idx+',this.value)" ' +
+    'onkeydown="if(event.key===\'Enter\')this.blur();if(event.key===\'Escape\'){this.value=\'\';this.blur();}" ' +
+    'onclick="event.stopPropagation()" />';
+  cell.querySelector('input').focus();
+}
+
+function saveBgtAlloc(label, idx, val) {
+  var v = parseFloat(val);
+  if (!isNaN(v) && v > 0) { allocMap[label] = v; }
+  else { delete allocMap[label]; }
+  localStorage.setItem('jprop_alloc', JSON.stringify(allocMap));
+  loadBudgetTab();
 }
 </script>
 </body>
