@@ -813,7 +813,7 @@ function renderTable() {
     var isLeadForm   = (c.leads || 0) > 0;
     var isEngagement = (c.messages || 0) > 0 && !isLeadForm;
     var costPerMsg   = isEngagement && c.spend ? Math.round(c.spend / c.messages * 100) / 100 : 0;
-    var leadsCell    = isLeadForm   ? c.leads    : '<span style="color:var(--muted)">&mdash;</span>';
+    var leadsCell    = isLeadForm   ? c.leads    : (isEngagement ? '<span style="color:var(--muted);font-size:11px;">'+c.messages+' msg</span>' : '<span style="color:var(--muted)">&mdash;</span>');
     var msgCell      = isEngagement ? c.messages : '<span style="color:var(--muted)">&mdash;</span>';
     var costCell     = isLeadForm ? cplBadge(c.cpl) : (isEngagement ? cplBadge(costPerMsg) : '<span style="color:var(--muted)">&mdash;</span>');
     rows += '<tr>' +
@@ -1101,9 +1101,12 @@ function loadAssignments() {
     var assignedFull = allCampaigns.filter(function(c){ return assignedIds[c.campaign_id]; });
     document.getElementById('avail-campaigns').innerHTML = available.length
       ? available.map(function(c) {
+          var hasLeads = (c.leads||0) > 0;
+          var hasMsgs  = (c.messages||0) > 0 && !hasLeads;
+          var metricStr = hasLeads ? c.leads+' leads' : (hasMsgs ? c.messages+' msg' : '—');
           return '<div class="assign-item">' +
             '<div class="assign-item-name"><div>'+escHtml(c.campaign_name)+'</div>' +
-            '<div class="assign-item-acc">'+escHtml(c.account_label||'')+' &middot; RM '+c.spend+' spend &middot; '+c.leads+' leads</div></div>' +
+            '<div class="assign-item-acc">'+escHtml(c.account_label||'')+' &middot; RM '+c.spend+' spend &middot; '+metricStr+'</div></div>' +
             '<button class="btn-ghost" style="padding:4px 12px;font-size:10px;" onclick="doAssign('+uid+','+(c.account_idx||0)+',\''+escAttr(c.campaign_id)+'\',\''+escAttr(c.campaign_name)+'\')">+ Assign</button>' +
             '</div>';
         }).join('')
@@ -1683,16 +1686,27 @@ function renderTrendCharts(data) {
 
 // ─── Budget Tab ───────────────────────────────────────────────────────────────
 function loadBudgetTab() {
-  // Aggregate per-account data from allCampaigns
   var source = enrichedCampaigns.length ? enrichedCampaigns : allCampaigns;
   var tbody   = document.getElementById('budget-tbody');
   var kpiEl   = document.getElementById('budget-kpis');
   var emptyEl = document.getElementById('budget-empty');
 
+  // If campaigns not yet loaded, fetch then re-render
   if (!source || !source.length) {
     tbody.innerHTML = '';
     kpiEl.innerHTML = '';
     emptyEl.style.display = 'block';
+    emptyEl.textContent = 'Loading…';
+    var url = '/api/admin/campaigns?preset=' + currentPreset;
+    if (currentPreset === 'custom' && customSince && customUntil) {
+      url = '/api/admin/campaigns?preset=custom&since=' + customSince + '&until=' + customUntil;
+    }
+    apiFetch(url).then(function(campaigns) {
+      allCampaigns = campaigns;
+      loadBudgetTab();
+    }).catch(function(e) {
+      emptyEl.textContent = 'Error loading data: ' + (e.message || e);
+    });
     return;
   }
   emptyEl.style.display = 'none';
