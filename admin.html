@@ -822,7 +822,6 @@ function renderTable() {
       '<td style="font-size:11px;white-space:nowrap;">' + (rgn ? rgnDot + escHtml(rgn) : '<span style="color:var(--muted)">—</span>') + '</td>' +
       '<td>' + statusBadge(c.effective_status) + '</td>' +
       '<td class="r" style="color:var(--muted);">' + (c.daily_budget ? 'RM '+Math.round(c.daily_budget) : '&mdash;') + '</td>' +
-      (function(){
       '<td class="r gold-val">' + rm(c.spend) + '</td>' +
       '<td class="r">' + leadsCell + '</td>' +
       '<td class="r" style="color:var(--muted);">' + msgCell + '</td>' +
