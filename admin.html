@@ -434,7 +434,6 @@ tr:hover td{background:rgba(247,245,240,0.02);}
       </div>
     </div>
   </div>
-</div>
 
 <!-- Callers Tab -->
 <div id="tab-callers" class="tab-panel">
@@ -444,8 +443,10 @@ tr:hover td{background:rgba(247,245,240,0.02);}
         <div style="font-size:13px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);">Campaign Caller Assignment</div>
         <div style="font-size:11px;color:var(--muted);margin-top:3px;">Assign up to 5 callers per campaign. Changes save instantly.</div>
       </div>
-      <div style="display:flex;gap:8px;align-items:center;">
-        <input id="callers-search" type="text" placeholder="Search campaigns…" oninput="filterCallersTable()" style="background:var(--surface);border:1px solid var(--line);color:var(--fg);padding:7px 12px;border-radius:6px;font-size:12px;width:200px;"/>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        <button id="callers-filter-all" onclick="setCallersFilter('all',this)" style="background:var(--surface);border:1px solid var(--gold);color:var(--gold);padding:6px 12px;border-radius:5px;font-size:11px;cursor:pointer;letter-spacing:.06em;">All</button>
+        <button id="callers-filter-active" onclick="setCallersFilter('active',this)" style="background:transparent;border:1px solid var(--line);color:var(--muted);padding:6px 12px;border-radius:5px;font-size:11px;cursor:pointer;letter-spacing:.06em;">Active Only</button>
+        <input id="callers-search" type="text" placeholder="Search campaigns…" oninput="filterCallersTable()" style="background:var(--surface);border:1px solid var(--line);color:var(--fg);padding:7px 12px;border-radius:6px;font-size:12px;width:180px;"/>
         <button onclick="loadCallersTab()" style="background:var(--surface);border:1px solid var(--line);color:var(--fg);padding:7px 14px;border-radius:6px;font-size:12px;cursor:pointer;">↻ Refresh</button>
       </div>
     </div>
@@ -500,6 +501,8 @@ tr:hover td{background:rgba(247,245,240,0.02);}
     <div id="budget-empty" style="display:none;text-align:center;padding:48px;color:var(--muted);font-size:13px;">No campaign data — load the Overview tab first.</div>
   </div>
 </div>
+
+</div><!-- /app -->
 
 <!-- Claude Modal -->
 <div class="modal-overlay" id="claude-modal">
@@ -1724,7 +1727,15 @@ function renderTrendCharts(data) {
 var callersMap = JSON.parse(localStorage.getItem('jprop_callers') || '{}');
 // callersMap: { campaign_id: ['name1','name2','name3','name4','name5'] }
 
-var _callersRows = []; // full list for search
+var _callersRows = []; // full list for search/filter
+var _callersFilter = 'all'; // 'all' | 'active'
+
+function setCallersFilter(mode, btn) {
+  _callersFilter = mode;
+  document.getElementById('callers-filter-all').style.cssText    = 'background:' + (mode==='all'    ? 'var(--surface);border:1px solid var(--gold);color:var(--gold)' : 'transparent;border:1px solid var(--line);color:var(--muted)') + ';padding:6px 12px;border-radius:5px;font-size:11px;cursor:pointer;letter-spacing:.06em;';
+  document.getElementById('callers-filter-active').style.cssText = 'background:' + (mode==='active' ? 'var(--surface);border:1px solid var(--gold);color:var(--gold)' : 'transparent;border:1px solid var(--line);color:var(--muted)') + ';padding:6px 12px;border-radius:5px;font-size:11px;cursor:pointer;letter-spacing:.06em;';
+  filterCallersTable();
+}
 
 function loadCallersTab() {
   var tbody   = document.getElementById('callers-tbody');
@@ -1829,11 +1840,11 @@ function saveCallerName(input) {
 }
 
 function filterCallersTable() {
-  var q = (document.getElementById('callers-search').value || '').toLowerCase();
-  if (!q) { renderCallersTable(_callersRows); return; }
+  var q = (document.getElementById('callers-search') ? document.getElementById('callers-search').value || '' : '').toLowerCase();
   var filtered = _callersRows.filter(function(c) {
-    return (c.campaign_name||'').toLowerCase().indexOf(q) >= 0 ||
-           (c.account_label||'').toLowerCase().indexOf(q) >= 0;
+    if (_callersFilter === 'active' && (c.effective_status || 'ACTIVE') !== 'ACTIVE') return false;
+    if (q && (c.campaign_name||'').toLowerCase().indexOf(q) < 0 && (c.account_label||'').toLowerCase().indexOf(q) < 0) return false;
+    return true;
   });
   renderCallersTable(filtered);
 }
