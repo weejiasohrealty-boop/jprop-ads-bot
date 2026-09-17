@@ -44,8 +44,8 @@ header{display:flex;align-items:center;justify-content:space-between;padding:18p
 .tab-panel{display:none;padding:32px 48px 60px;}
 .tab-panel.active{display:block;}
 .preset-bar{display:flex;gap:8px;margin-bottom:28px;flex-wrap:wrap;align-items:center;}
-.preset-btn{background:none;border:1px solid var(--line);color:var(--muted);padding:7px 14px;font-size:11px;letter-spacing:0.06em;border-radius:4px;cursor:pointer;font-family:'Inter',sans-serif;transition:all 0.2s;}
-.preset-btn.active{border-color:var(--gold);color:var(--gold);}
+.preset-btn,.callers-preset-btn{background:none;border:1px solid var(--line);color:var(--muted);padding:7px 14px;font-size:11px;letter-spacing:0.06em;border-radius:4px;cursor:pointer;font-family:'Inter',sans-serif;transition:all 0.2s;}
+.preset-btn.active,.callers-preset-btn.active{border-color:var(--gold);color:var(--gold);}
 .refresh-btn{background:none;border:1px solid var(--line);color:var(--muted);padding:7px 12px;font-size:12px;border-radius:4px;cursor:pointer;font-family:'Inter',sans-serif;margin-left:auto;transition:all 0.2s;}
 .refresh-btn:hover{color:var(--paper);}
 /* Map */
@@ -437,8 +437,10 @@ tr:hover td{background:rgba(247,245,240,0.02);}
 
 <!-- Callers Tab -->
 <div id="tab-callers" class="tab-panel">
-  <div style="max-width:1100px;margin:0 auto;padding:24px 0;">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px;">
+  <div style="max-width:1200px;margin:0 auto;padding:24px 0;">
+
+    <!-- Top row: title + search/filters -->
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px;">
       <div>
         <div style="font-size:13px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);">Campaign Caller Assignment</div>
         <div style="font-size:11px;color:var(--muted);margin-top:3px;">Assign up to 5 callers per campaign. Changes save instantly.</div>
@@ -446,22 +448,48 @@ tr:hover td{background:rgba(247,245,240,0.02);}
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
         <button id="callers-filter-all" onclick="setCallersFilter('all',this)" style="background:var(--surface);border:1px solid var(--gold);color:var(--gold);padding:6px 12px;border-radius:5px;font-size:11px;cursor:pointer;letter-spacing:.06em;">All</button>
         <button id="callers-filter-active" onclick="setCallersFilter('active',this)" style="background:transparent;border:1px solid var(--line);color:var(--muted);padding:6px 12px;border-radius:5px;font-size:11px;cursor:pointer;letter-spacing:.06em;">Active Only</button>
-        <input id="callers-search" type="text" placeholder="Search campaigns…" oninput="filterCallersTable()" style="background:var(--surface);border:1px solid var(--line);color:var(--fg);padding:7px 12px;border-radius:6px;font-size:12px;width:180px;"/>
-        <button onclick="loadCallersTab()" style="background:var(--surface);border:1px solid var(--line);color:var(--fg);padding:7px 14px;border-radius:6px;font-size:12px;cursor:pointer;">↻ Refresh</button>
+        <input id="callers-search" type="text" placeholder="Search campaigns…" oninput="filterCallersTable()" style="background:var(--surface);border:1px solid var(--line);color:var(--fg);padding:7px 12px;border-radius:6px;font-size:12px;width:170px;"/>
+        <button onclick="loadCallersTab(true)" style="background:var(--surface);border:1px solid var(--line);color:var(--fg);padding:7px 14px;border-radius:6px;font-size:12px;cursor:pointer;">↻ Refresh</button>
       </div>
     </div>
 
-    <div style="background:var(--surface);border:1px solid var(--line);border-radius:10px;overflow:hidden;">
-      <table id="callers-table" style="width:100%;border-collapse:collapse;font-size:12px;">
+    <!-- Date preset bar -->
+    <div style="display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap;align-items:center;">
+      <span style="font-size:10px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-right:4px;">Period:</span>
+      <button class="callers-preset-btn active" onclick="setCallersPreset('last_week_sun_sat',this)">Last Week</button>
+      <button class="callers-preset-btn" onclick="setCallersPreset('this_week_sun_today',this)">This Week</button>
+      <button class="callers-preset-btn" onclick="setCallersPreset('this_month',this)">This Month</button>
+      <button class="callers-preset-btn" onclick="setCallersPreset('last_month',this)">Last Month</button>
+      <button class="callers-preset-btn" onclick="setCallersPreset('last_7d',this)">7 Days</button>
+      <button class="callers-preset-btn" onclick="setCallersPreset('last_14d',this)">14 Days</button>
+      <button class="callers-preset-btn" onclick="setCallersPreset('last_30d',this)">30 Days</button>
+      <button class="callers-preset-btn" onclick="setCallersPreset('maximum',this)">Max</button>
+      <button class="callers-preset-btn" onclick="toggleCallerCustomDate(this)" id="callers-custom-btn">Custom</button>
+    </div>
+    <div id="callers-custom-bar" style="display:none;gap:8px;align-items:center;margin-bottom:14px;flex-wrap:wrap;">
+      <span style="font-size:11px;color:var(--muted);">From</span>
+      <input type="date" id="callers-since" style="background:var(--surface);border:1px solid var(--line);color:var(--fg);padding:6px 10px;border-radius:5px;font-size:12px;"/>
+      <span style="font-size:11px;color:var(--muted);">To</span>
+      <input type="date" id="callers-until" style="background:var(--surface);border:1px solid var(--line);color:var(--fg);padding:6px 10px;border-radius:5px;font-size:12px;"/>
+      <button onclick="applyCallerCustomDate()" style="background:var(--gold);color:#000;border:none;padding:6px 14px;border-radius:5px;font-size:11px;cursor:pointer;font-weight:600;">Apply</button>
+    </div>
+    <div id="callers-loading" style="display:none;color:var(--muted);font-size:12px;margin-bottom:10px;">⏳ Loading…</div>
+
+    <!-- Table -->
+    <div style="background:var(--surface);border:1px solid var(--line);border-radius:10px;overflow:auto;">
+      <table id="callers-table" style="width:100%;border-collapse:collapse;font-size:12px;min-width:900px;">
         <thead>
           <tr style="background:rgba(255,255,255,.04);border-bottom:1px solid var(--line);">
-            <th style="padding:11px 16px;text-align:left;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:600;min-width:260px;">Campaign</th>
-            <th style="padding:11px 8px;text-align:left;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:600;">Account</th>
-            <th style="padding:11px 8px;text-align:left;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:600;min-width:130px;">Caller 1</th>
-            <th style="padding:11px 8px;text-align:left;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:600;min-width:130px;">Caller 2</th>
-            <th style="padding:11px 8px;text-align:left;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:600;min-width:130px;">Caller 3</th>
-            <th style="padding:11px 8px;text-align:left;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:600;min-width:130px;">Caller 4</th>
-            <th style="padding:11px 8px;text-align:left;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:600;min-width:130px;">Caller 5</th>
+            <th style="padding:11px 16px;text-align:left;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:600;min-width:220px;">Campaign</th>
+            <th style="padding:11px 8px;text-align:left;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:600;white-space:nowrap;">Account</th>
+            <th style="padding:11px 8px;text-align:right;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:600;white-space:nowrap;">Spend</th>
+            <th style="padding:11px 8px;text-align:right;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:600;white-space:nowrap;">Leads</th>
+            <th style="padding:11px 8px;text-align:right;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:600;white-space:nowrap;">CPL</th>
+            <th style="padding:11px 8px;text-align:left;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:600;min-width:120px;">Caller 1</th>
+            <th style="padding:11px 8px;text-align:left;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:600;min-width:120px;">Caller 2</th>
+            <th style="padding:11px 8px;text-align:left;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:600;min-width:120px;">Caller 3</th>
+            <th style="padding:11px 8px;text-align:left;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:600;min-width:120px;">Caller 4</th>
+            <th style="padding:11px 8px;text-align:left;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:600;min-width:120px;">Caller 5</th>
           </tr>
         </thead>
         <tbody id="callers-tbody"></tbody>
@@ -1727,8 +1755,11 @@ function renderTrendCharts(data) {
 var callersMap = JSON.parse(localStorage.getItem('jprop_callers') || '{}');
 // callersMap: { campaign_id: ['name1','name2','name3','name4','name5'] }
 
-var _callersRows = []; // full list for search/filter
+var _callersRows   = []; // full deduped list for search/filter
 var _callersFilter = 'all'; // 'all' | 'active'
+var callersPreset  = 'last_week_sun_sat';
+var callersSince   = '';
+var callersUntil   = '';
 
 function setCallersFilter(mode, btn) {
   _callersFilter = mode;
@@ -1737,70 +1768,125 @@ function setCallersFilter(mode, btn) {
   filterCallersTable();
 }
 
-function loadCallersTab() {
+function setCallersPreset(p, btn) {
+  callersPreset = p;
+  callersSince  = '';
+  callersUntil  = '';
+  document.querySelectorAll('.callers-preset-btn').forEach(function(b){ b.classList.remove('active'); });
+  if (btn) btn.classList.add('active');
+  // hide custom bar
+  var bar = document.getElementById('callers-custom-bar');
+  if (bar) bar.style.display = 'none';
+  loadCallersTab(true);
+}
+
+function toggleCallerCustomDate(btn) {
+  var bar = document.getElementById('callers-custom-bar');
+  if (!bar) return;
+  var showing = bar.style.display !== 'none';
+  bar.style.display = showing ? 'none' : 'flex';
+  document.querySelectorAll('.callers-preset-btn').forEach(function(b){ b.classList.remove('active'); });
+  if (!showing && btn) btn.classList.add('active');
+}
+
+function applyCallerCustomDate() {
+  var s = document.getElementById('callers-since');
+  var u = document.getElementById('callers-until');
+  if (!s || !u || !s.value || !u.value) { alert('Please select both From and To dates.'); return; }
+  callersPreset = 'custom';
+  callersSince  = s.value;
+  callersUntil  = u.value;
+  loadCallersTab(true);
+}
+
+function loadCallersTab(forceRefresh) {
   var tbody   = document.getElementById('callers-tbody');
   var emptyEl = document.getElementById('callers-empty');
   var tbl     = document.getElementById('callers-table');
+  var loadEl  = document.getElementById('callers-loading');
 
-  var source = enrichedCampaigns.length ? enrichedCampaigns : allCampaigns;
-
-  if (!source || !source.length) {
-    tbody.innerHTML = '';
-    tbl.style.display = 'none';
-    emptyEl.style.display = 'block';
-    emptyEl.textContent = 'Loading…';
-    var url = '/api/admin/campaigns?preset=' + currentPreset;
-    if (currentPreset === 'custom' && customSince && customUntil) {
-      url = '/api/admin/campaigns?preset=custom&since=' + customSince + '&until=' + customUntil;
-    }
-    apiFetch(url).then(function(campaigns) {
-      allCampaigns = campaigns;
-      loadCallersTab();
-    }).catch(function(e) {
-      emptyEl.textContent = 'Error: ' + (e.message || e);
-    });
+  if (!forceRefresh && _callersRows.length) {
+    // Already have data — just re-render
+    emptyEl.style.display = 'none';
+    tbl.style.display = '';
+    filterCallersTable();
     return;
   }
 
+  // Need to fetch
+  tbody.innerHTML = '';
+  tbl.style.display = 'none';
   emptyEl.style.display = 'none';
-  tbl.style.display = '';
+  if (loadEl) loadEl.style.display = 'block';
 
-  // Deduplicate by campaign_id, sort by account then name
-  var seen = {};
-  _callersRows = [];
-  source.forEach(function(c) {
-    if (!c.campaign_id || seen[c.campaign_id]) return;
-    seen[c.campaign_id] = true;
-    _callersRows.push(c);
-  });
-  _callersRows.sort(function(a, b) {
-    var al = (a.account_label||'').toLowerCase(), bl = (b.account_label||'').toLowerCase();
-    if (al !== bl) return al < bl ? -1 : 1;
-    return (a.campaign_name||'').toLowerCase() < (b.campaign_name||'').toLowerCase() ? -1 : 1;
-  });
+  var url = '/api/admin/campaigns?preset=' + callersPreset;
+  if (callersPreset === 'custom' && callersSince && callersUntil) {
+    url = '/api/admin/campaigns?preset=custom&since=' + callersSince + '&until=' + callersUntil;
+  }
 
-  renderCallersTable(_callersRows);
+  apiFetch(url).then(function(campaigns) {
+    if (loadEl) loadEl.style.display = 'none';
+    if (!campaigns || !campaigns.length) {
+      emptyEl.textContent = 'No campaign data found.';
+      emptyEl.style.display = 'block';
+      return;
+    }
+
+    // Deduplicate by campaign_id, sort by account then name
+    var seen = {};
+    _callersRows = [];
+    campaigns.forEach(function(c) {
+      if (!c.campaign_id || seen[c.campaign_id]) return;
+      seen[c.campaign_id] = true;
+      _callersRows.push(c);
+    });
+    _callersRows.sort(function(a, b) {
+      var al = (a.account_label||'').toLowerCase(), bl = (b.account_label||'').toLowerCase();
+      if (al !== bl) return al < bl ? -1 : 1;
+      return (a.campaign_name||'').toLowerCase() < (b.campaign_name||'').toLowerCase() ? -1 : 1;
+    });
+
+    tbl.style.display = '';
+    filterCallersTable();
+  }).catch(function(e) {
+    if (loadEl) loadEl.style.display = 'none';
+    emptyEl.textContent = 'Error: ' + (e.message || e);
+    emptyEl.style.display = 'block';
+  });
 }
 
 function renderCallersTable(rows) {
   var tbody = document.getElementById('callers-tbody');
   if (!rows.length) {
-    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:32px;color:var(--muted);">No campaigns found.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:32px;color:var(--muted);">No campaigns found.</td></tr>';
     return;
   }
+
+  var rm = function(v){ return v ? 'RM '+parseFloat(v).toLocaleString('en-MY',{minimumFractionDigits:0,maximumFractionDigits:0}) : '—'; };
 
   var lastAcct = null;
   tbody.innerHTML = rows.map(function(c) {
     var callers = callersMap[c.campaign_id] || ['','','','',''];
     while (callers.length < 5) callers.push('');
     var cid = escAttr(c.campaign_id);
+
     var acctHeader = '';
     if (c.account_label !== lastAcct) {
       lastAcct = c.account_label;
       acctHeader = '<tr style="background:rgba(176,141,62,0.05);border-top:2px solid var(--line);">' +
-        '<td colspan="7" style="padding:7px 16px;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--gold);font-weight:600;">'+escHtml(c.account_label||'')+'</td>' +
+        '<td colspan="10" style="padding:7px 16px;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--gold);font-weight:600;">'+escHtml(c.account_label||'')+'</td>' +
         '</tr>';
     }
+
+    // Leads / messages cell
+    var isLeadForm   = (c.objective||'').indexOf('LEAD') >= 0 || (c.leads||0) > 0;
+    var isEngagement = (c.objective||'').indexOf('ENGAGEMENT') >= 0 || (c.objective||'').indexOf('MESSAGES') >= 0;
+    var leadsVal = (c.leads||0) > 0 ? c.leads : ((c.messages||0) > 0 ? (c.messages + ' <span style="font-size:10px;color:var(--muted);">msg</span>') : '—');
+    var spend    = parseFloat(c.spend||0);
+    var leads    = parseInt(c.leads||0);
+    var msgs     = parseInt(c.messages||0);
+    var metric   = leads > 0 ? leads : msgs;
+    var cpl      = (spend > 0 && metric > 0) ? rm(spend / metric) : '—';
 
     var callerCells = [0,1,2,3,4].map(function(i) {
       var val = callers[i] || '';
@@ -1815,12 +1901,16 @@ function renderCallersTable(rows) {
         '</td>';
     }).join('');
 
-    return acctHeader + '<tr style="border-bottom:1px solid rgba(255,255,255,.04);" onmouseover="this.style.background=\'rgba(255,255,255,.02)\'" onmouseout="this.style.background=\'\'">' +
-      '<td style="padding:8px 16px;font-size:12px;font-weight:500;max-width:260px;">' +
-        '<div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="'+escAttr(c.campaign_name||'')+'">'+escHtml(c.campaign_name||'')+'</div>' +
+    return acctHeader +
+      '<tr style="border-bottom:1px solid rgba(255,255,255,.04);" onmouseover="this.style.background=\'rgba(255,255,255,.02)\'" onmouseout="this.style.background=\'\'">' +
+      '<td style="padding:8px 16px;font-size:12px;font-weight:500;">' +
+        '<div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px;" title="'+escAttr(c.campaign_name||'')+'">'+escHtml(c.campaign_name||'')+'</div>' +
         (c.effective_status ? '<div style="font-size:10px;color:'+(c.effective_status==='ACTIVE'?'#4ade80':'var(--muted)')+';margin-top:2px;">'+c.effective_status+'</div>' : '') +
       '</td>' +
       '<td style="padding:8px 8px;color:var(--muted);font-size:11px;white-space:nowrap;">'+escHtml(c.account_label||'')+'</td>' +
+      '<td style="padding:8px 8px;text-align:right;font-size:12px;color:var(--gold);white-space:nowrap;">'+(spend > 0 ? rm(spend) : '<span style="color:var(--muted)">—</span>')+'</td>' +
+      '<td style="padding:8px 8px;text-align:right;font-size:12px;white-space:nowrap;">'+leadsVal+'</td>' +
+      '<td style="padding:8px 8px;text-align:right;font-size:12px;color:var(--muted);white-space:nowrap;">'+cpl+'</td>' +
       callerCells +
       '</tr>';
   }).join('');
@@ -1832,10 +1922,8 @@ function saveCallerName(input) {
   if (!callersMap[cid]) callersMap[cid] = ['','','','',''];
   while (callersMap[cid].length < 5) callersMap[cid].push('');
   callersMap[cid][idx] = input.value.trim();
-  // Clean up empty entries
   if (callersMap[cid].every(function(v){ return !v; })) delete callersMap[cid];
   localStorage.setItem('jprop_callers', JSON.stringify(callersMap));
-  // Update border color
   input.style.borderColor = input.value ? 'rgba(176,141,62,.4)' : 'var(--line)';
 }
 
