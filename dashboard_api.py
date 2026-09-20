@@ -325,9 +325,10 @@ async def investor_dashboard(preset: str = "last_week_sun_sat", user=Depends(cur
     totals["roi"] = round(totals["commission"] / totals["spend"], 2) if totals["spend"] and totals["commission"] else 0
     return {"campaigns": campaigns, "totals": totals}
 
-@app.get("/", response_class=HTMLResponse)
+@app.get("/")
 def serve_dashboard():
-    return FileResponse(BASE_DIR / "dashboard.html")
+    from fastapi.responses import RedirectResponse
+    return RedirectResponse(url="/admin")
 
 @app.get("/admin", response_class=HTMLResponse)
 def serve_admin():
