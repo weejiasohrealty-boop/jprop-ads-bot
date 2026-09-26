@@ -162,6 +162,7 @@ tr:hover td{background:rgba(247,245,240,0.02);}
     <div class="header-right">
       <button class="btn-claude" onclick="openClaudeAnalysis()">&#10022; Analyze with Claude</button>
       <button class="btn-ghost" onclick="sendTelegramTest()" title="Send daily report to Telegram now">📲 Send Report</button>
+      <button id="btn-cpl-alert" class="btn-ghost" onclick="sendCplAlert()" title="Send Telegram alert for CPL &gt; RM100 or wasted spend" style="display:none;">🚨 CPL Alert</button>
       <button class="btn-ghost" onclick="logout()">Sign Out</button>
     </div>
   </header>
@@ -307,12 +308,13 @@ tr:hover td{background:rgba(247,245,240,0.02);}
             <th>Account</th>
             <th class="r">Spend</th>
             <th class="r">Leads</th>
+            <th class="r">Msg</th>
             <th class="r">CPL</th>
             <th style="width:160px;">Region</th>
           </tr>
         </thead>
         <tbody id="region-assign-tbody">
-          <tr><td colspan="6" class="loading">Loading…</td></tr>
+          <tr><td colspan="7" class="loading">Loading…</td></tr>
         </tbody>
       </table>
     </div>
@@ -646,6 +648,25 @@ function sendTelegramTest() {
     .then(function(r){ showToast(r.ok ? '✅ Sent to Telegram!' : '❌ Failed — check bot token'); })
     .catch(function(){ showToast('❌ Error sending — check Telegram env vars', 'err'); });
 }
+function sendCplAlert() {
+  showToast('Sending CPL alert to Telegram…');
+  apiFetch('/api/admin/cpl-alert', {method:'POST'})
+    .then(function(r){
+      if (r.ok) {
+        showToast('🚨 Alert sent! ' + r.critical + ' critical CPL, ' + r.wasted + ' wasted spend');
+      } else {
+        showToast('ℹ️ ' + (r.reason || 'No alert needed'), 'ok');
+      }
+    })
+    .catch(function(){ showToast('❌ Error sending CPL alert', 'err'); });
+}
+// Check after loading if any campaigns need CPL alert
+function checkCplAlertNeeded(campaigns) {
+  var hasCritical = campaigns.some(function(c){ return (c.leads||0) > 0 && (c.cpl||0) > 100; });
+  var hasWasted   = campaigns.some(function(c){ return (c.leads||0) === 0 && (c.messages||0) === 0 && (c.spend||0) > 100; });
+  var btn = document.getElementById('btn-cpl-alert');
+  if (btn) btn.style.display = (hasCritical || hasWasted) ? '' : 'none';
+}
 
 function rm(v) {
   return 'RM ' + Number(v).toLocaleString('en-MY', {minimumFractionDigits:0, maximumFractionDigits:0});
@@ -841,6 +862,11 @@ function renderTable() {
     document.getElementById('ov-tbody').innerHTML = '<tr><td colspan="16" class="empty">No campaigns match filters</td></tr>';
     return;
   }
+  // Pre-compute max CPL across campaigns with leads
+  var maxCPL = 0;
+  data.forEach(function(c) {
+    if ((c.leads || 0) > 0 && (c.cpl || 0) > maxCPL) maxCPL = c.cpl;
+  });
   // Rows — with region group headers when sorted by region
   var rows = '';
   var groupByRegion = currentSortCol === 'region';
@@ -883,8 +909,14 @@ function renderTable() {
     var leadsCell    = isLeadForm   ? c.leads    : (isEngagement ? '<span style="color:var(--muted);font-size:11px;">'+c.messages+' msg</span>' : '<span style="color:var(--muted)">&mdash;</span>');
     var msgCell      = isEngagement ? c.messages : '<span style="color:var(--muted)">&mdash;</span>';
     var costCell     = isLeadForm ? cplBadge(c.cpl) : (isEngagement ? cplBadge(costPerMsg) : '<span style="color:var(--muted)">&mdash;</span>');
-    rows += '<tr>' +
-      '<td><div class="camp-name">' + escHtml(c.campaign_name) + '</div></td>' +
+    // ⚠️ flag: high spend with zero leads
+    var noLeadWarn = (!isLeadForm && !isEngagement && (c.spend || 0) > 100);
+    var campNameCell = escHtml(c.campaign_name) + (noLeadWarn ? ' <span title="Spent >RM100 with no leads" style="cursor:default;">⚠️</span>' : '');
+    // Highlight max CPL
+    var isMaxCPL = isLeadForm && maxCPL > 0 && c.cpl === maxCPL;
+    if (isMaxCPL) costCell = costCell.replace('<span class="badge ', '<span title="Highest CPL" class="badge ') + ' <span style="font-size:11px;cursor:default;" title="Highest CPL">🔴</span>';
+    rows += '<tr' + (noLeadWarn ? ' style="background:rgba(220,80,30,0.06);"' : '') + '>' +
+      '<td><div class="camp-name">' + campNameCell + '</div></td>' +
       '<td style="color:var(--muted);font-size:11px;">' + escHtml(c.account_label||'') + '</td>' +
       '<td style="font-size:11px;white-space:nowrap;">' + (rgn ? rgnDot + escHtml(rgn) : '<span style="color:var(--muted)">—</span>') + '</td>' +
       '<td>' + statusBadge(c.effective_status) + '</td>' +
@@ -990,6 +1022,7 @@ function loadOverview() {
     document.getElementById('ov-roi').textContent        = totals.roi ? totals.roi + 'x' : '-';
     renderTable();
     renderMap();
+    checkCplAlertNeeded(enrichedCampaigns);
   }).catch(function(e) {
     document.getElementById('ov-tbody').innerHTML = '<tr><td colspan="16" class="empty">Failed to load &mdash; ' + e.message + '</td></tr>';
   });
@@ -1273,7 +1306,7 @@ function setRegionPreset(p, btn) {
 
 function loadRegionTab() {
   document.getElementById('region-perf-tbody').innerHTML = '<tr><td colspan="11" class="loading">Loading…</td></tr>';
-  document.getElementById('region-assign-tbody').innerHTML = '<tr><td colspan="6" class="loading">Loading…</td></tr>';
+  document.getElementById('region-assign-tbody').innerHTML = '<tr><td colspan="7" class="loading">Loading…</td></tr>';
   Promise.all([
     apiFetch('/api/admin/campaigns?preset=' + regionTabPreset),
     apiFetch('/api/admin/profits')
@@ -1382,19 +1415,23 @@ function kpiMini(label, val, color) {
 
 function renderRegionAssignTable() {
   if (!regionCampaigns.length) {
-    document.getElementById('region-assign-tbody').innerHTML = '<tr><td colspan="6" class="empty">No campaigns with spend</td></tr>';
+    document.getElementById('region-assign-tbody').innerHTML = '<tr><td colspan="7" class="empty">No campaigns with spend</td></tr>';
     return;
   }
   var rows = regionCampaigns.map(function(c) {
     var rowId = 'ra-' + c.campaign_id.replace(/[^a-z0-9]/gi,'_');
     var opts = '<option value="">— None —</option>' +
       REGIONS.map(function(r){ return '<option value="'+r+'"'+(regionMap[c.campaign_id]===r?' selected':'')+'>'+r+'</option>'; }).join('');
+    var msgCell = (c.messages || 0) > 0
+      ? '<span style="color:var(--muted);font-size:11px;">'+c.messages+' msg</span>'
+      : '<span style="color:var(--line)">—</span>';
     return '<tr>' +
       '<td><div class="camp-name">'+escHtml(c.campaign_name)+'</div></td>' +
       '<td style="color:var(--muted);font-size:11px;">'+escHtml(c.account_label||'')+'</td>' +
       '<td class="r gold-val">RM '+c.spend+'</td>' +
-      '<td class="r">'+(c.leads?c.leads:'<span style="color:var(--muted)">—</span>')+'</td>' +
-      '<td class="r">'+(c.cpl?cplBadge(c.cpl):'<span style="color:var(--muted)">—</span>')+'</td>' +
+      '<td class="r">'+(c.leads?c.leads:'<span style="color:var(--line)">—</span>')+'</td>' +
+      '<td class="r">'+msgCell+'</td>' +
+      '<td class="r">'+(c.cpl?cplBadge(c.cpl):'<span style="color:var(--line)">—</span>')+'</td>' +
       '<td><select id="'+rowId+'" onchange="assignRegion(\''+escAttr(c.campaign_id)+'\',this.value)" style="padding:5px 8px;font-size:11px;border-radius:4px;">'+opts+'</select></td>' +
       '</tr>';
   }).join('');
