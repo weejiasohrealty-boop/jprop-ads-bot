@@ -1422,16 +1422,20 @@ function renderRegionAssignTable() {
     var rowId = 'ra-' + c.campaign_id.replace(/[^a-z0-9]/gi,'_');
     var opts = '<option value="">— None —</option>' +
       REGIONS.map(function(r){ return '<option value="'+r+'"'+(regionMap[c.campaign_id]===r?' selected':'')+'>'+r+'</option>'; }).join('');
-    var msgCell = (c.messages || 0) > 0
+    var hasLeads = (c.leads || 0) > 0;
+    var hasMsgs  = (c.messages || 0) > 0;
+    var msgCell  = hasMsgs
       ? '<span style="color:var(--muted);font-size:11px;">'+c.messages+' msg</span>'
       : '<span style="color:var(--line)">—</span>';
+    var cplVal   = hasLeads ? c.cpl : (hasMsgs && c.spend ? Math.round(c.spend / c.messages * 100) / 100 : 0);
+    var cplCell  = cplVal ? cplBadge(cplVal) : '<span style="color:var(--line)">—</span>';
     return '<tr>' +
       '<td><div class="camp-name">'+escHtml(c.campaign_name)+'</div></td>' +
       '<td style="color:var(--muted);font-size:11px;">'+escHtml(c.account_label||'')+'</td>' +
       '<td class="r gold-val">RM '+c.spend+'</td>' +
-      '<td class="r">'+(c.leads?c.leads:'<span style="color:var(--line)">—</span>')+'</td>' +
+      '<td class="r">'+(hasLeads?c.leads:'<span style="color:var(--line)">—</span>')+'</td>' +
       '<td class="r">'+msgCell+'</td>' +
-      '<td class="r">'+(c.cpl?cplBadge(c.cpl):'<span style="color:var(--line)">—</span>')+'</td>' +
+      '<td class="r">'+cplCell+'</td>' +
       '<td><select id="'+rowId+'" onchange="assignRegion(\''+escAttr(c.campaign_id)+'\',this.value)" style="padding:5px 8px;font-size:11px;border-radius:4px;">'+opts+'</select></td>' +
       '</tr>';
   }).join('');
