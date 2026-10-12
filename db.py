@@ -217,3 +217,112 @@ def list_profits() -> list:
     cur.close()
     c.close()
     return [dict(r) for r in rows]
+
+
+# ── Deals (Sales Tracker) ────────────────────────────────────────────────────
+
+def init_deals():
+    c = _conn()
+    cur = c.cursor()
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS deals (
+            id           SERIAL PRIMARY KEY,
+            deal_date    TEXT NOT NULL,
+            project      TEXT NOT NULL DEFAULT '',
+            member_name  TEXT NOT NULL DEFAULT '',
+            sales_value  REAL DEFAULT 0,
+            portion_pct  REAL DEFAULT 0,
+            portion_rm   REAL DEFAULT 0,
+            remark       TEXT DEFAULT '',
+            created_at   TEXT DEFAULT (NOW()::TEXT)
+        )
+    """)
+    c.commit()
+    cur.close()
+    c.close()
+
+
+def add_deal(deal_date: str, project: str, member_name: str,
+             sales_value: float, portion_pct: float, portion_rm: float,
+             remark: str = "") -> dict:
+    c = _conn()
+    cur = c.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    cur.execute(
+        """INSERT INTO deals
+               (deal_date, project, member_name, sales_value, portion_pct, portion_rm, remark)
+           VALUES (%s,%s,%s,%s,%s,%s,%s) RETURNING *""",
+        (deal_date, project, member_name, sales_value, portion_pct, portion_rm, remark),
+    )
+    row = cur.fetchone()
+    c.commit()
+    cur.close()
+    c.close()
+    return dict(row)
+
+
+def list_deals(date_from: str = None, date_until: str = None,
+               project: str = None, member_name: str = None) -> list:
+    c = _conn()
+    cur = c.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    q = "SELECT * FROM deals WHERE 1=1"
+    params = []
+    if date_from:
+        q += " AND deal_date >= %s"; params.append(date_from)
+    if date_until:
+        q += " AND deal_date <= %s"; params.append(date_until)
+    if project:
+        q += " AND LOWER(project) LIKE LOWER(%s)"; params.append(f"%{project}%")
+    if member_name:
+        q += " AND LOWER(member_name) LIKE LOWER(%s)"; params.append(f"%{member_name}%")
+    q += " ORDER BY deal_date DESC, id DESC"
+    cur.execute(q, params)
+    rows = cur.fetchall()
+    cur.close()
+    c.close()
+    return [dict(r) for r in rows]
+
+
+def update_deal(deal_id: int, deal_date: str, project: str, member_name: str,
+                sales_value: float, portion_pct: float, portion_rm: float,
+                remark: str = "") -> dict | None:
+    c = _conn()
+    cur = c.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    cur.execute(
+        """UPDATE deals SET deal_date=%s, project=%s, member_name=%s, sales_value=%s,
+           portion_pct=%s, portion_rm=%s, remark=%s WHERE id=%s RETURNING *""",
+        (deal_date, project, member_name, sales_value, portion_pct, portion_rm, remark, deal_id),
+    )
+    row = cur.fetchone()
+    c.commit()
+    cur.close()
+    c.close()
+    return dict(row) if row else None
+
+
+def delete_deal(deal_id: int):
+    c = _conn()
+    cur = c.cursor()
+    cur.execute("DELETE FROM deals WHERE id=%s", (deal_id,))
+    c.commit()
+    cur.close()
+    c.close()
+
+
+def list_deal_projects() -> list:
+    c = _conn()
+    cur = c.cursor()
+    cur.execute("SELECT DISTINCT project FROM deals WHERE project != '' ORDER BY project")
+    rows = cur.fetchall()
+    cur.close()
+    c.close()
+    return [r[0] for r in rows]
+
+
+def list_deal_members() -> list:
+    c = _conn()
+    cur = c.cursor()
+    cur.execute("SELECT DISTINCT member_name FROM deals WHERE member_name != '' ORDER BY member_name")
+    rows = cur.fetchall()
+    cur.close()
+    c.close()
+    return [r[0] for r in rows]
