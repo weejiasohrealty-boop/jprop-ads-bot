@@ -37,7 +37,12 @@ ADSET_INSIGHT_FIELDS = ",".join([
     "video_thruplay_watched_actions",
 ])
 
-LEAD_ACTION_TYPES = {"lead", "offsite_conversion.lead"}
+LEAD_ACTION_TYPES = {
+    "lead",
+    "offsite_conversion.lead",
+    "onsite_conversion.lead_grouped",
+    "leadgen_grouped",
+}
 HOOK_ACTION_TYPES = {"video_view"}
 LINK_CLICK_ACTION_TYPES = {"inline_link_click", "link_click"}
 
@@ -57,8 +62,6 @@ ACCOUNTS = [
     {"label": "Jayden",                 "emoji": "🌟", "id": "act_870160215193259",  "token_key": "TOKEN_JPROP"},
     {"label": "KJ",                     "emoji": "🤖", "id": "act_866285942301565",  "token_key": "TOKEN_JPROP"},
     {"label": "Lisa",                   "emoji": "🏔️", "id": "act_1472295653590786", "token_key": "TOKEN_JPROP"},
-    {"label": "Jingyi",                   "emoji": "🏝️", "id": "act_1110201530339734", "token_key": "TOKEN_JPROP"},
-    {"label": "Aurora",                   "emoji": "💰", "id": "act_392729040755779", "token_key": "TOKEN_JPROP"},
 ]
 
 
@@ -120,7 +123,7 @@ async def _get(session: aiohttp.ClientSession, url: str, params: dict) -> dict:
         return {"error": {"message": str(e)}}
 
 
-async def _fetch_account(session: aiohttp.ClientSession, account: dict, preset: str) -> dict:
+async def _fetch_account(session: aiohttp.ClientSession, account: dict, preset: str, time_range: str = "") -> dict:
     try:
         token = get_token(account["token_key"])
     except RuntimeError as e:
@@ -128,10 +131,14 @@ async def _fetch_account(session: aiohttp.ClientSession, account: dict, preset: 
 
     acc_id = account["id"]
 
-    insights_task = _get(session, f"{GRAPH_API}/{acc_id}/insights", {
-        "fields": INSIGHT_FIELDS, "level": "campaign",
-        "date_preset": preset, "access_token": token, "limit": 100,
-    })
+    # Use time_range (JSON string) for custom dates; otherwise use date_preset
+    insight_params: dict = {"fields": INSIGHT_FIELDS, "level": "campaign", "access_token": token, "limit": 100}
+    if time_range:
+        insight_params["time_range"] = time_range
+    else:
+        insight_params["date_preset"] = preset
+
+    insights_task = _get(session, f"{GRAPH_API}/{acc_id}/insights", insight_params)
     campaigns_task = _get(session, f"{GRAPH_API}/{acc_id}/campaigns", {
         "fields": "id,daily_budget,lifetime_budget,effective_status,updated_time",
         "access_token": token, "limit": 500,
@@ -210,9 +217,10 @@ async def _fetch_account_adset(session: aiohttp.ClientSession, account: dict, pr
     }
 
 
-async def fetch_all_accounts(preset: str) -> list:
+async def fetch_all_accounts(preset: str, since: str = "", until: str = "") -> list:
+    time_range = json.dumps({"since": since, "until": until}) if (since and until) else ""
     async with aiohttp.ClientSession() as session:
-        tasks = [_fetch_account(session, acc, preset) for acc in ACCOUNTS]
+        tasks = [_fetch_account(session, acc, preset, time_range) for acc in ACCOUNTS]
         return await asyncio.gather(*tasks)
 
 
