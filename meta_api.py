@@ -37,12 +37,7 @@ ADSET_INSIGHT_FIELDS = ",".join([
     "video_thruplay_watched_actions",
 ])
 
-LEAD_ACTION_TYPES = {
-    "lead",
-    "offsite_conversion.lead",
-    "onsite_conversion.lead_grouped",
-    "leadgen_grouped",
-}
+LEAD_ACTION_TYPES = {"lead", "offsite_conversion.lead"}
 HOOK_ACTION_TYPES = {"video_view"}
 LINK_CLICK_ACTION_TYPES = {"inline_link_click", "link_click"}
 
@@ -72,8 +67,20 @@ def get_token(key: str) -> str:
     return val
 
 
-def get_actions_value(actions: list, types: set) -> float:
-    return sum(float(a.get("value", 0)) for a in (actions or []) if a.get("action_type") in types)
+def get_actions_value(actions: list, types: set, use_max: bool = False) -> float:
+    """Sum (or max) matching action values. Use max=True for messaging types to avoid double-counting."""
+    vals = [float(a.get("value", 0)) for a in (actions or []) if a.get("action_type") in types]
+    if not vals:
+        return 0
+    return max(vals) if use_max else sum(vals)
+
+def get_messages_value(actions: list, types: set) -> float:
+    """Take the max across messaging action types to avoid double-counting overlapping windows."""
+    return get_actions_value(actions, types, use_max=True)
+
+def get_leads_value(actions: list, types: set) -> float:
+    """Take the max across lead action types to avoid double-counting (lead + offsite_conversion.lead)."""
+    return get_actions_value(actions, types, use_max=True)
 
 
 def extract_link_ctr(row: dict) -> float:

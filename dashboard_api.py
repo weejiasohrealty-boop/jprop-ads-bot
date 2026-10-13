@@ -22,7 +22,7 @@ from db import (
 )
 from meta_api import (
     ACCOUNTS, fetch_all_accounts, fetch_single_account,
-    get_actions_value, LEAD_ACTION_TYPES, fetch_trend_data,
+    get_actions_value, get_messages_value, get_leads_value, LEAD_ACTION_TYPES, fetch_trend_data,
 )
 
 WHATSAPP_ACTION_TYPES = {
@@ -239,8 +239,8 @@ async def all_campaigns(preset: str = "last_week_sun_sat", since: str = "", unti
         for c in (r.get("data") or []):
             cid  = c.get("campaign_id", "")
             sp   = float(c.get("spend", 0))
-            ld   = get_actions_value(c.get("actions") or [], LEAD_ACTION_TYPES)
-            msg  = get_actions_value(c.get("actions") or [], WHATSAPP_ACTION_TYPES)
+            ld   = get_leads_value(c.get("actions") or [], LEAD_ACTION_TYPES)
+            msg  = get_messages_value(c.get("actions") or [], WHATSAPP_ACTION_TYPES)
             imp  = int(c.get("impressions", 0))
             hook = get_actions_value(c.get("actions") or [], {"video_view"})
             hook_pct = round(hook / imp * 100, 1) if imp else 0
@@ -361,8 +361,8 @@ async def campaign_trend(days: int = 30, _=Depends(admin_only)):
                 if not dk:
                     continue
                 sp  = float(d.get("spend", 0))
-                ld  = get_actions_value(d.get("actions") or [], LEAD_ACTION_TYPES)
-                msg = get_actions_value(d.get("actions") or [], WHATSAPP_ACTION_TYPES)
+                ld  = get_leads_value(d.get("actions") or [], LEAD_ACTION_TYPES)
+                msg = get_messages_value(d.get("actions") or [], WHATSAPP_ACTION_TYPES)
                 out.append({
                     "date":          dk,
                     "account_label": label,
@@ -395,8 +395,8 @@ async def investor_dashboard(preset: str = "last_week_sun_sat", user=Depends(cur
             if c.get("campaign_id") not in cids:
                 continue
             sp  = float(c.get("spend", 0))
-            ld  = get_actions_value(c.get("actions") or [], LEAD_ACTION_TYPES)
-            msg = get_actions_value(c.get("actions") or [], WHATSAPP_ACTION_TYPES)
+            ld  = get_leads_value(c.get("actions") or [], LEAD_ACTION_TYPES)
+            msg = get_messages_value(c.get("actions") or [], WHATSAPP_ACTION_TYPES)
             cpl = round(sp / ld, 2) if ld else 0
             p   = get_profit(c.get("campaign_id", ""))
             closing_sales = p.get("closing_sales", 0)
@@ -443,8 +443,8 @@ async def _collect_campaigns(preset: str = "this_week_sun_today") -> list:
     for r in results:
         for c in (r.get("data") or []):
             sp  = float(c.get("spend", 0))
-            ld  = get_actions_value(c.get("actions") or [], LEAD_ACTION_TYPES)
-            msg = get_actions_value(c.get("actions") or [], WHATSAPP_ACTION_TYPES)
+            ld  = get_leads_value(c.get("actions") or [], LEAD_ACTION_TYPES)
+            msg = get_messages_value(c.get("actions") or [], WHATSAPP_ACTION_TYPES)
             imp = int(c.get("impressions", 0))
             hook = get_actions_value(c.get("actions") or [], {"video_view"})
             out.append({
