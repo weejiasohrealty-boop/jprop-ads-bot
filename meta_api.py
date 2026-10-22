@@ -41,6 +41,20 @@ LEAD_ACTION_TYPES = {"lead", "offsite_conversion.lead"}
 HOOK_ACTION_TYPES = {"video_view"}
 LINK_CLICK_ACTION_TYPES = {"inline_link_click", "link_click"}
 
+WHATSAPP_ACTION_TYPES = {
+    # 7-day window variants
+    "onsite_conversion.messaging_conversation_started_7d",
+    "messaging_conversation_started_7d",
+    # 1-day window variants (used by some campaign objectives e.g. KJ Keeperz)
+    "onsite_conversion.messaging_conversation_started_1d",
+    "messaging_conversation_started_1d",
+    # Other messaging signals
+    "onsite_conversion.total_messaging_connection",
+    "onsite_conversion.messaging_first_reply",
+    # Click-to-WhatsApp / click-to-Messenger
+    "click_to_whatsapp_all",
+}
+
 ACCOUNTS = [
     {"label": "Tony & WJ",              "emoji": "🔵", "id": "act_1751988812183106", "token_key": "TOKEN_JPROP"},
     {"label": "JPROP / Weejia",         "emoji": "🟢", "id": "act_893342706197387",  "token_key": "TOKEN_JPROP"},
