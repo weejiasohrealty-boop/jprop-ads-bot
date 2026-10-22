@@ -45,7 +45,7 @@ WHATSAPP_ACTION_TYPES = {
     # 7-day window variants
     "onsite_conversion.messaging_conversation_started_7d",
     "messaging_conversation_started_7d",
-    # 1-day window variants (used by some campaign objectives e.g. KJ Keeperz)
+    # 1-day window variants
     "onsite_conversion.messaging_conversation_started_1d",
     "messaging_conversation_started_1d",
     # Other messaging signals
@@ -53,6 +53,13 @@ WHATSAPP_ACTION_TYPES = {
     "onsite_conversion.messaging_first_reply",
     # Click-to-WhatsApp / click-to-Messenger
     "click_to_whatsapp_all",
+    # WhatsApp Business account conversations
+    "onsite_conversion.messaging_business_account_7d",
+    "onsite_conversion.messaging_business_account_1d",
+    # Welcome message views (some WA campaigns)
+    "onsite_conversion.messaging_welcome_message_views",
+    # Contact (used by some click-to-WhatsApp campaigns)
+    "contact",
 }
 
 ACCOUNTS = [
