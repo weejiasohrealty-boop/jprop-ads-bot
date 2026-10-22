@@ -559,6 +559,16 @@ let customUntil    = '';
 let allCampaigns   = [];
 let allProfits     = {};
 let enrichedCampaigns = [];
+// Manual campaign type overrides — persisted in localStorage
+let campTypeOverrides = JSON.parse(localStorage.getItem('campTypeOverrides') || '{}');
+function toggleCampType(campId) {
+  var cur = campTypeOverrides[campId];
+  if (!cur)          campTypeOverrides[campId] = 'msg';   // auto → force msg
+  else if (cur==='msg')  campTypeOverrides[campId] = 'lead';  // msg → force lead
+  else               delete campTypeOverrides[campId];        // lead → back to auto
+  localStorage.setItem('campTypeOverrides', JSON.stringify(campTypeOverrides));
+  renderTable();
+}
 let claudePromptText  = '';
 // Filter & sort state
 let currentStatusFilter  = 'all';
@@ -902,16 +912,32 @@ function renderTable() {
         '<td colspan="6"></td>' +
         '</tr>';
     }
-    // Detect campaign type
-    var isLeadForm   = (c.leads || 0) > 0;
-    var isEngagement = (c.messages || 0) > 0 && !isLeadForm;
-    var costPerMsg   = isEngagement && c.spend ? Math.round(c.spend / c.messages * 100) / 100 : 0;
+    // Detect campaign type — check manual override first, then auto-detect
+    var _override = campTypeOverrides[c.campaign_id];
+    var isLeadForm, isEngagement;
+    if (_override === 'lead') {
+      isLeadForm = true; isEngagement = false;
+    } else if (_override === 'msg') {
+      isLeadForm = false; isEngagement = true;
+    } else {
+      // Auto: prefer messages when messages > leads (avoids stray-lead CPL inflation)
+      isLeadForm   = (c.leads || 0) > 0 && (c.leads || 0) >= (c.messages || 0);
+      isEngagement = (c.messages || 0) > 0 && !isLeadForm;
+    }
+    var costPerMsg   = isEngagement && c.spend ? Math.round(c.spend / (c.messages||1) * 100) / 100 : 0;
+    // Type toggle chip
+    var chipLabel = _override ? (_override==='msg' ? '💬 Msg' : '📋 Lead') : (isLeadForm ? '📋 Lead' : (isEngagement ? '💬 Msg' : '—'));
+    var chipTitle = _override ? 'Click to cycle: Msg→Lead→Auto (currently forced)' : 'Click to force type (currently auto)';
+    var chipStyle = 'cursor:pointer;font-size:10px;padding:1px 5px;border-radius:3px;margin-left:5px;vertical-align:middle;'
+      + (_override ? 'background:rgba(176,141,62,0.35);color:var(--gold);border:1px solid var(--gold);'
+                   : 'background:rgba(255,255,255,0.07);color:var(--muted);border:1px solid rgba(255,255,255,0.12);');
+    var typeChip = '<span title="'+chipTitle+'" style="'+chipStyle+'" onclick="event.stopPropagation();toggleCampType(\''+escHtml(c.campaign_id)+'\')">'+chipLabel+'</span>';
     var leadsCell    = isLeadForm   ? c.leads    : (isEngagement ? '<span style="color:var(--muted);font-size:11px;">'+c.messages+' msg</span>' : '<span style="color:var(--muted)">&mdash;</span>');
     var msgCell      = isEngagement ? c.messages : '<span style="color:var(--muted)">&mdash;</span>';
     var costCell     = isLeadForm ? cplBadge(c.cpl) : (isEngagement ? cplBadge(costPerMsg) : '<span style="color:var(--muted)">&mdash;</span>');
-    // ⚠️ flag: high spend with zero leads
+    // ⚠️ flag: high spend with zero leads/messages
     var noLeadWarn = (!isLeadForm && !isEngagement && (c.spend || 0) > 100);
-    var campNameCell = escHtml(c.campaign_name) + (noLeadWarn ? ' <span title="Spent >RM100 with no leads" style="cursor:default;">⚠️</span>' : '');
+    var campNameCell = escHtml(c.campaign_name) + typeChip + (noLeadWarn ? ' <span title="Spent >RM100 with no leads" style="cursor:default;">⚠️</span>' : '');
     // Highlight max CPL
     var isMaxCPL = isLeadForm && maxCPL > 0 && c.cpl === maxCPL;
     if (isMaxCPL) costCell = costCell.replace('<span class="badge ', '<span title="Highest CPL" class="badge ') + ' <span style="font-size:11px;cursor:default;" title="Highest CPL">🔴</span>';
