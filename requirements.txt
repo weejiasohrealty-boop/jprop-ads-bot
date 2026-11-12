@@ -6,3 +6,4 @@ fastapi
 uvicorn[standard]
 python-multipart
 psycopg2-binary
+python-telegram-bot==20.7
