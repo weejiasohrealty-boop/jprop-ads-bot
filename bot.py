@@ -56,7 +56,7 @@ MAIN_KBD = [
     [{"text": "🌟 Jayden",      "callback_data": "pick:12"},
     {"text": "🤖 KJ",      "callback_data": "pick:13"}],
     [{"text": "🏔️ Jingyi",      "callback_data": "pick:14"},
-      {"text": "🐼 Ginni",      "callback_data": "pick:13"}],
+      {"text": "🐼 Ginni",      "callback_data": "pick:15"}],
     [{"text": "📋 Weekly Report → Sheets", "callback_data": "weekly"}],
 ]
 
