@@ -1,441 +1,245 @@
 #!/usr/bin/env python3
 """
-JPROP Ads Assistant — Telegram Bot
-Uses raw aiohttp to call Telegram API directly.
-No python-telegram-bot dependency — works on any Python version.
+bot.py — JPROP Telegram Report Bot
+/start  → all active accounts summary (spend, leads, CPL)
+Click account → campaign breakdown
+/alert  → CPL > RM50 warnings
 """
-import os, html, logging, asyncio
-from datetime import datetime, timezone, timedelta
-from aiohttp import web, ClientSession, ClientTimeout
+import os, asyncio
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes
+
 from meta_api import (
-    ACCOUNTS, fetch_all_accounts, fetch_single_account,
-    get_actions_value, LEAD_ACTION_TYPES,
+    ACCOUNTS, fetch_all_accounts,
+    get_leads_value, get_messages_value,
+    LEAD_ACTION_TYPES, WHATSAPP_ACTION_TYPES,
 )
-from sheets_report import write_weekly_report, _tab_name_for_last_week
 
-logging.basicConfig(format="%(asctime)s %(levelname)s %(message)s", level=logging.INFO)
-log = logging.getLogger(__name__)
+TOKEN         = os.environ.get("TELEGRAM_BOT_TOKEN", "")
+CPL_THRESHOLD = 50.0
+PRESET        = "this_week"
 
-TOKEN   = os.environ["TELEGRAM_BOT_TOKEN"]
-PORT    = int(os.environ.get("PORT", 10000))
-TG      = f"https://api.telegram.org/bot{TOKEN}"
-MAX_LEN = 4000
 
-MORNING_CHAT_ID  = int(os.environ.get("MORNING_CHAT_ID", "0"))
-MORNING_HOUR_UTC = int(os.environ.get("MORNING_HOUR_UTC", "1"))
+# ── Helpers ───────────────────────────────────────────────────────────────────
 
-DATE_LABELS = {
-    "today":               "Today",
-    "yesterday":           "Yesterday",
-    "this_week_sun_today": "This Week",
-    "this_month":          "This Month",
-    "last_week_sun_sat":   "Last Week",
-    "last_month":          "Last Month",
-}
+def rm(v):
+    return f"RM {v:,.0f}"
 
-MAIN_KBD = [
-    [{"text": "📊 All — Today",      "callback_data": "all:today"},
-     {"text": "📊 All — Yesterday",  "callback_data": "all:yesterday"}],
-    [{"text": "📊 All — This Week",  "callback_data": "all:this_week_sun_today"},
-     {"text": "📊 All — This Month", "callback_data": "all:this_month"}],
-    [{"text": "📊 All — Last Week",  "callback_data": "all:last_week_sun_sat"},
-     {"text": "📊 All — Last Month", "callback_data": "all:last_month"}],
-    [{"text": "── Single Account ──", "callback_data": "noop"}],
-    [{"text": "🔵 Tony & WJ",   "callback_data": "pick:0"},
-     {"text": "🟢 Weejia",      "callback_data": "pick:1"}],
-    [{"text": "🟣 Ivan",        "callback_data": "pick:2"},
-     {"text": "🔶 Darren",      "callback_data": "pick:3"}],
-    [{"text": "🔴 Joey",        "callback_data": "pick:4"},
-     {"text": "🟡 Am Prop",     "callback_data": "pick:5"}],
-    [{"text": "⚪ Janice",      "callback_data": "pick:6"},
-     {"text": "🟤 Pang",        "callback_data": "pick:7"}],
-    [{"text": "🟠 Chris",       "callback_data": "pick:8"},
-     {"text": "⛔️ Jet",         "callback_data": "pick:9"}],
-    [{"text": "🥎 Cheng",       "callback_data": "pick:10"},
-     {"text": "🔥 Hannah",      "callback_data": "pick:11"}],
-    [{"text": "🌟 Jayden",      "callback_data": "pick:12"},
-    {"text": "🤖 KJ",      "callback_data": "pick:13"}],
-    [{"text": "🏔️ Jingyi",      "callback_data": "pick:14"},
-      {"text": "🐼 Ginni",      "callback_data": "pick:15"}],
-    [{"text": "📋 Weekly Report → Sheets", "callback_data": "weekly"}],
-]
+def cpl_icon(v):
+    if v == 0:   return "⚪"
+    if v <= 50:  return "✅"
+    if v <= 100: return "🟡"
+    return "🔴"
 
-def acc_kbd(i: int) -> list:
-    s = str(i)
-    return [
-        [{"text": "Today",      "callback_data": f"acc:{s}:today"},
-         {"text": "Yesterday",  "callback_data": f"acc:{s}:yesterday"}],
-        [{"text": "This Week",  "callback_data": f"acc:{s}:this_week_sun_today"},
-         {"text": "This Month", "callback_data": f"acc:{s}:this_month"}],
-        [{"text": "Last Week",  "callback_data": f"acc:{s}:last_week_sun_sat"},
-         {"text": "Last Month", "callback_data": f"acc:{s}:last_month"}],
-        [{"text": "« Back",     "callback_data": "menu"}],
+
+async def fetch_accounts(preset=PRESET):
+    """Fetch all accounts and return parsed summary + campaigns."""
+    results = await fetch_all_accounts(preset)
+    accounts = []
+    for r in results:
+        if r.get("error"):
+            continue
+        budget_map = r.get("budget_map", {})
+        campaigns = []
+        for c in r.get("data", []):
+            sp = float(c.get("spend", 0))
+            if sp == 0:
+                continue
+            actions = c.get("actions", [])
+            ld  = int(get_leads_value(actions, LEAD_ACTION_TYPES))
+            msg = int(get_messages_value(actions, WHATSAPP_ACTION_TYPES))
+            # Prefer messaging when messages > leads
+            is_lead = ld > 0 and ld >= msg
+            is_msg  = msg > 0 and not is_lead
+            cpl = round(sp / ld, 2) if is_lead and ld else 0
+            cost_msg = round(sp / msg, 2) if is_msg and msg else 0
+            cid = c.get("campaign_id", "")
+            campaigns.append({
+                "name":     c.get("campaign_name", ""),
+                "id":       cid,
+                "spend":    round(sp, 2),
+                "budget":   round(budget_map.get(cid, 0), 0),
+                "leads":    ld,
+                "messages": msg,
+                "cpl":      cpl,
+                "cost_msg": cost_msg,
+                "is_lead":  is_lead,
+                "is_msg":   is_msg,
+                "status":   c.get("effective_status", "UNKNOWN"),
+            })
+        if not campaigns:
+            continue
+        active = [c for c in campaigns if c["status"] == "ACTIVE"]
+        total_spend  = sum(c["spend"]  for c in campaigns)
+        total_leads  = sum(c["leads"]  for c in campaigns)
+        total_budget = sum(c["budget"] for c in active)
+        avg_cpl = round(total_spend / total_leads, 0) if total_leads else 0
+        accounts.append({
+            "label":     r["label"],
+            "emoji":     r["emoji"],
+            "spend":     total_spend,
+            "leads":     total_leads,
+            "budget":    total_budget,
+            "avg_cpl":   avg_cpl,
+            "campaigns": campaigns,
+        })
+    return accounts
+
+
+# ── Account summary ───────────────────────────────────────────────────────────
+
+async def show_summary(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    msg = update.message or update.callback_query.message
+    loading = await msg.reply_text("⏳ Fetching this week's data…")
+
+    accounts = await fetch_accounts()
+    ctx.user_data["accounts"] = accounts
+
+    if not accounts:
+        await loading.edit_text("No active campaigns found.")
+        return
+
+    total_spend = sum(a["spend"] for a in accounts)
+    total_leads = sum(a["leads"] for a in accounts)
+    overall_cpl = round(total_spend / total_leads, 0) if total_leads else 0
+
+    lines = [
+        "🏢 <b>JPROP — This Week</b>",
+        f"Total Spend: <b>{rm(total_spend)}</b>  |  Leads: <b>{total_leads}</b>  |  CPL: <b>{rm(overall_cpl)}</b> {cpl_icon(overall_cpl)}",
+        "",
     ]
-
-def _h(t):     return html.escape(str(t))
-def rm(v):     return f"RM{round(v)}"
-def b_cpm(v):  return "🔴" if v > 150 else ("🟡" if v > 80  else "🟢")
-def b_hook(v): return "🟢" if v >= 30  else ("🟡" if v >= 15 else "🔴")
-def b_thru(v): return "🟢" if v >= 10  else ("🟡" if v >= 5  else "🔴")
-def b_ctr(v):  return "🟢" if v >= 1.0 else ("🟡" if v >= 0.5 else "🔴")
-def b_cpl(v):  return "🟢" if 0 < v <= 50 else ("🟡" if v <= 100 else "🔴")
-
-def _edit_str(iso: str) -> str:
-    if not iso:
-        return ""
-    try:
-        dt   = datetime.strptime(iso[:19], "%Y-%m-%dT%H:%M:%S").replace(tzinfo=timezone.utc)
-        days = (datetime.now(timezone.utc) - dt).days
-        return f" 📅 {dt.strftime('%-d %b')} · {days}d ago"
-    except Exception:
-        return ""
-
-def fmt_campaign(c: dict, bm: dict) -> str:
-    name      = _h(c.get("campaign_name", "Unknown")[:45])
-    status    = c.get("effective_status", "ACTIVE")
-    is_active = status == "ACTIVE"
-    spend     = float(c.get("spend", 0))
-    imp       = int(c.get("impressions", 0))
-    cpm       = float(c.get("cpm", 0))
-    ctr       = float(c.get("ctr", 0))
-    acts      = c.get("actions") or []
-    thru_a    = c.get("video_thruplay_watched_actions") or []
-    cid       = c.get("campaign_id", "")
-
-    leads  = get_actions_value(acts, LEAD_ACTION_TYPES)
-    hook   = get_actions_value(acts, {"video_view"})
-    thru   = sum(float(a.get("value", 0)) for a in thru_a)
-    hook_p = hook / imp * 100 if imp else 0
-    thru_p = thru / imp * 100 if imp else 0
-    cpl    = spend / leads if leads else 0
-    daily  = bm.get(cid, 0)
-
-    if spend > 0:
-        badge = "🟢" if is_active else "⏸️"
-    else:
-        badge = "📌"
-
-    bud_s  = f" <i>💰{rm(daily)}/day</i>" if (daily > 0 and is_active) else ""
-    edit_s = _edit_str(c.get("updated_time", ""))
-    lead_s = f"{int(leads)} leads" if leads else "<b>0 leads ⚠️</b>"
-    cpl_s  = f" | CPL <b>{rm(cpl)}</b>{b_cpl(cpl)}" if leads else ""
-
-    line  = f"  {badge} <b>{name}</b>{bud_s}{edit_s}\n"
-    line += f"     💸 {rm(spend)} | {lead_s}{cpl_s}\n"
-    line += f"     CPM {rm(cpm)}{b_cpm(cpm)} | Hook {hook_p:.1f}%{b_hook(hook_p)}"
-    line += f" | Thru {thru_p:.1f}%{b_thru(thru_p)} | CTR {ctr:.2f}%{b_ctr(ctr)}"
-    return line
-
-async def build_all(preset: str) -> str:
-    results  = await fetch_all_accounts(preset)
-    label    = DATE_LABELS.get(preset, preset)
-    parts    = [f"📊 <b>All Accounts — {label}</b>\n{'─'*30}"]
-    alerts   = []
-    gs = gl = g_budget = 0.0
-    best_cpl       = None
-    best_cpl_label = ""
-
-    for r in results:
-        emoji = r["emoji"]
-        lbl   = r["label"]
-        data  = r.get("data") or []
-        err   = r.get("error")
-        bm    = r.get("budget_map", {})
-
-        if err:
-            parts.append(f"{emoji} <b>{_h(lbl)}</b> ❌ {_h(err.get('message',''))}")
-            continue
-        if not data:
-            parts.append(f"{emoji} <b>{_h(lbl)}</b> — 📭 No data")
-            continue
-
-        acc_budget = sum(
-            bm.get(c.get("campaign_id", ""), 0) for c in data
-            if c.get("effective_status", "ACTIVE") == "ACTIVE"
+    buttons = []
+    for i, acc in enumerate(accounts):
+        icon = cpl_icon(acc["avg_cpl"])
+        lines.append(
+            f"{acc['emoji']} <b>{acc['label']}</b>  "
+            f"Spent {rm(acc['spend'])}  |  {acc['leads']} leads  |  "
+            f"CPL {rm(acc['avg_cpl'])} {icon}"
         )
-        bud_hdr = f" | 💰 <b>{rm(acc_budget)}/day</b>" if acc_budget > 0 else ""
-        lines   = [f"{emoji} <b>{_h(lbl)}</b>{bud_hdr}"]
-        acc_sp  = acc_ld = 0.0
+        buttons.append([InlineKeyboardButton(
+            f"{acc['emoji']} {acc['label']}", callback_data=f"acc:{i}"
+        )])
 
-        for c in data:
-            sp        = float(c.get("spend", 0))
-            imp       = int(c.get("impressions", 0))
-            cpm       = float(c.get("cpm", 0))
-            acts      = c.get("actions") or []
-            ld        = get_actions_value(acts, LEAD_ACTION_TYPES)
-            hook      = get_actions_value(acts, {"video_view"})
-            hook_p    = hook / imp * 100 if imp else 0
-            cpl       = sp / ld if ld else 0
-            is_active = c.get("effective_status", "ACTIVE") == "ACTIVE"
-            acc_sp += sp; acc_ld += ld
+    buttons.append([InlineKeyboardButton("🚨 CPL Alert (>RM50)", callback_data="alert")])
 
-            name  = _h(c.get("campaign_name", "Unknown")[:38])
-            ld_s  = f"{int(ld)} leads | CPL {rm(cpl)}{b_cpl(cpl)}" if ld else "0 leads ⚠️"
-            icon  = ("🟢" if is_active else "⏸️") if sp > 0 else "•"
-            lines.append(f"  {icon} <b>{name}</b>\n    {rm(sp)} | {ld_s} | CPM {rm(cpm)}{b_cpm(cpm)}")
+    await loading.edit_text(
+        "\n".join(lines),
+        parse_mode="HTML",
+        reply_markup=InlineKeyboardMarkup(buttons),
+    )
 
-            if sp >= 100 and ld == 0:
-                alerts.append(f"⚠️ <b>{_h(lbl)}</b> — {_h(c.get('campaign_name','')[:25])} {rm(sp)} 0 leads")
-            if ld > 0 and cpl > 50:
-                alerts.append(f"💸 <b>{_h(lbl)}</b> — {_h(c.get('campaign_name','')[:25])} CPL {rm(cpl)}{b_cpl(cpl)}")
-            if imp >= 1000 and hook_p < 15:
-                alerts.append(f"🎣 <b>{_h(lbl)}</b> — {_h(c.get('campaign_name','')[:25])} Hook {hook_p:.1f}% — fix first 3s")
 
-            if ld > 0 and cpl > 0 and (best_cpl is None or cpl < best_cpl):
-                best_cpl       = cpl
-                best_cpl_label = f"{emoji} {lbl} · {c.get('campaign_name','')[:28]}"
+# ── Campaign detail ───────────────────────────────────────────────────────────
 
-        gs += acc_sp; gl += acc_ld; g_budget += acc_budget
-        acpl   = acc_sp / acc_ld if acc_ld else 0
-        acpl_s = f"{int(acc_ld)} leads | CPL <b>{rm(acpl)}</b>{b_cpl(acpl)}" if acc_ld else "0 leads ⚠️"
-        lines.append(f"  ↳ Spent <b>{rm(acc_sp)}</b> | {acpl_s}")
-        parts.append("\n".join(lines))
+async def show_campaigns(query, acc):
+    lines = [f"{acc['emoji']} <b>{acc['label']} — Campaigns</b>\n"]
 
-    gcpl  = gs / gl if gl else 0
-    bud_t = f"Budget <b>{rm(g_budget)}/day</b> | " if g_budget > 0 else ""
-    cpl_t = f" | Avg CPL <b>{rm(gcpl)}</b>{b_cpl(gcpl)}" if gl else ""
-    parts += [f"{'─'*30}",
-              f"📦 <b>GRAND TOTAL</b>\n{bud_t}Spent <b>{rm(gs)}</b> | <b>{int(gl)} leads</b>{cpl_t}"]
+    for c in sorted(acc["campaigns"], key=lambda x: -x["spend"]):
+        status = "🟢" if c["status"] == "ACTIVE" else "⏸"
+        budget = f"{rm(c['budget'])}/day" if c["budget"] else "—"
 
-    if best_cpl is not None:
-        parts.append(f"🏆 <b>Best CPL:</b> {rm(best_cpl)} — {_h(best_cpl_label)}")
-
-    if alerts:
-        parts.append(f"🚨 <b>Alerts ({len(alerts)})</b>\n" + "\n".join(alerts))
-    return "\n\n".join(parts)
-
-async def build_single(idx: int, preset: str) -> str:
-    r     = await fetch_single_account(idx, preset)
-    label = DATE_LABELS.get(preset, preset)
-    emoji = r["emoji"]
-    lbl   = r["label"]
-    data  = r.get("data") or []
-    err   = r.get("error")
-    bm    = r.get("budget_map", {})
-    hdr   = f"📊 <b>{_h(lbl)} — {label}</b>\n{'─'*30}"
-
-    if err:      return f"{hdr}\n❌ {_h(err.get('message',''))}"
-    if not data: return f"{hdr}\n📭 No active campaigns"
-
-    parts  = [f"{hdr}\n{emoji} <b>{_h(lbl)}</b>"]
-    tot_sp = tot_ld = tot_bud = 0.0
-    alerts = []
-
-    for c in data:
-        sp  = float(c.get("spend", 0))
-        ld  = get_actions_value(c.get("actions") or [], LEAD_ACTION_TYPES)
-        cpl = sp / ld if ld else 0
-        bud = bm.get(c.get("campaign_id", ""), 0)
-        tot_sp += sp; tot_ld += ld; tot_bud += bud
-        parts.append(fmt_campaign(c, bm))
-        if sp >= 100 and ld == 0:
-            alerts.append(f"⚠️ {_h(c.get('campaign_name','')[:30])} {rm(sp)} — 0 leads")
-        if ld > 0 and cpl > 50:
-            alerts.append(f"💸 CPL {rm(cpl)}{b_cpl(cpl)} — {_h(c.get('campaign_name','')[:30])}")
-
-    tcpl  = tot_sp / tot_ld if tot_ld else 0
-    tls   = f"🎯 {int(tot_ld)} leads | CPL <b>{rm(tcpl)}</b>{b_cpl(tcpl)}" if tot_ld else "<b>0 leads ⚠️</b>"
-    bud_l = f" | Budget <b>{rm(tot_bud)}/day</b>" if tot_bud > 0 else ""
-    parts.append(f"💰 <b>Spent: {rm(tot_sp)}{bud_l} | {tls}</b>")
-    if alerts:
-        parts.append("🚨 <b>Alerts:</b>\n" + "\n".join(alerts))
-    return "\n\n".join(parts)
-
-async def tg(session: ClientSession, method: str, payload: dict) -> dict:
-    try:
-        async with session.post(
-            f"{TG}/{method}", json=payload,
-            timeout=ClientTimeout(total=10)
-        ) as r:
-            return await r.json()
-    except Exception as e:
-        log.error(f"tg/{method} error: {e}")
-        return {}
-
-async def send(session: ClientSession, chat_id: int, text: str, kbd: list = None) -> None:
-    kw = {"chat_id": chat_id, "parse_mode": "HTML"}
-    if kbd:
-        kw["reply_markup"] = {"inline_keyboard": kbd}
-
-    if len(text) <= MAX_LEN:
-        await tg(session, "sendMessage", {**kw, "text": text})
-        return
-
-    paras, cur, chunks = text.split("\n\n"), "", []
-    for p in paras:
-        if len(cur) + len(p) + 2 > MAX_LEN:
-            chunks.append(cur.strip()); cur = p
+        if c["is_lead"]:
+            result = f"{c['leads']} leads | CPL {rm(c['cpl'])} {cpl_icon(c['cpl'])}"
+        elif c["is_msg"]:
+            result = f"{c['messages']} msg | Cost/msg {rm(c['cost_msg'])} {cpl_icon(c['cost_msg'])}"
         else:
-            cur += ("\n\n" if cur else "") + p
-    if cur:
-        chunks.append(cur.strip())
+            wasted_flag = " ⚠️ no results" if c["spend"] > 100 else ""
+            result = f"No leads/msg{wasted_flag}"
 
-    for i, chunk in enumerate(chunks):
-        payload = {**kw, "text": chunk}
-        if i < len(chunks) - 1:
-            payload.pop("reply_markup", None)
-        await tg(session, "sendMessage", payload)
+        lines.append(
+            f"{status} <b>{c['name'][:45]}</b>\n"
+            f"   Budget {budget}  |  Spent {rm(c['spend'])}\n"
+            f"   {result}\n"
+        )
 
-async def handle(update: dict) -> None:
-    async with ClientSession() as session:
-        if "message" in update:
-            msg  = update["message"]
-            text = msg.get("text", "").strip()
-            cid  = msg["chat"]["id"]
-            if text.startswith("/start") or text.startswith("/help"):
-                await send(session, cid,
-                           "👋 <b>JPROP Ads Assistant</b>\n\nTap a button to get your report:",
-                           MAIN_KBD)
-            elif text.startswith("/chatid"):
-                await send(session, cid, f"Your chat ID: <code>{cid}</code>")
-            return
+    keyboard = InlineKeyboardMarkup([[
+        InlineKeyboardButton("← Back to Accounts", callback_data="back")
+    ]])
+    await query.message.reply_text(
+        "\n".join(lines), parse_mode="HTML", reply_markup=keyboard
+    )
 
-        if "callback_query" not in update:
-            return
 
-        q   = update["callback_query"]
-        cid = q["message"]["chat"]["id"]
-        d   = q["data"]
-        await tg(session, "answerCallbackQuery", {"callback_query_id": q["id"]})
+# ── CPL Alert ─────────────────────────────────────────────────────────────────
 
-        if d == "noop":
-            return
+async def show_alert(query_or_msg, ctx):
+    is_query = hasattr(query_or_msg, "message")
+    reply_to = query_or_msg.message if is_query else query_or_msg
 
-        if d == "menu":
-            await send(session, cid,
-                       "👋 <b>JPROP Ads Assistant</b>\n\nTap a button to get your report:",
-                       MAIN_KBD)
-            return
+    accounts = ctx.user_data.get("accounts")
+    if not accounts:
+        loading = await reply_to.reply_text("⏳ Fetching data…")
+        accounts = await fetch_accounts()
+        ctx.user_data["accounts"] = accounts
+        await loading.delete()
 
-        if d == "weekly":
-            await build_weekly_report(session, cid)
+    lines = ["🚨 <b>CPL Alert — Over RM50</b>\n"]
+    found = False
 
-        elif d.startswith("all:"):
-            preset = d.split(":", 1)[1]
-            await send(session, cid, f"⏳ Fetching {DATE_LABELS.get(preset, preset)}…")
-            await send(session, cid, await build_all(preset), MAIN_KBD)
+    for acc in accounts:
+        problems = []
+        for c in acc["campaigns"]:
+            if c["is_lead"] and c["cpl"] > CPL_THRESHOLD:
+                problems.append(f"  🔴 {c['name'][:42]}\n     CPL {rm(c['cpl'])} ({c['leads']} leads, spent {rm(c['spend'])})")
+            elif c["is_msg"] and c["cost_msg"] > CPL_THRESHOLD:
+                problems.append(f"  🟡 {c['name'][:42]}\n     Cost/msg {rm(c['cost_msg'])} ({c['messages']} msg, spent {rm(c['spend'])})")
+            elif not c["is_lead"] and not c["is_msg"] and c["spend"] > 100:
+                problems.append(f"  ⚠️ {c['name'][:42]}\n     {rm(c['spend'])} spent, 0 leads/msg")
+        if problems:
+            found = True
+            lines.append(f"{acc['emoji']} <b>{acc['label']}</b>")
+            lines.extend(problems)
+            lines.append("")
 
-        elif d.startswith("pick:"):
-            idx = int(d.split(":", 1)[1])
-            if idx >= len(ACCOUNTS):
-                await send(session, cid, "❌ Account not found.", MAIN_KBD)
-                return
-            a   = ACCOUNTS[idx]
-            await send(session, cid,
-                       f"{a['emoji']} <b>{_h(a['label'])}</b> — select period:",
-                       acc_kbd(idx))
+    if not found:
+        lines.append("✅ All campaigns under RM50 — looking good!")
 
-        elif d.startswith("acc:"):
-            _, idx_s, preset = d.split(":")
-            idx = int(idx_s)
-            await send(session, cid,
-                       f"⏳ Fetching {ACCOUNTS[idx]['label']} — {DATE_LABELS.get(preset, preset)}…")
-            await send(session, cid, await build_single(idx, preset), acc_kbd(idx))
+    keyboard = InlineKeyboardMarkup([[
+        InlineKeyboardButton("← Back to Accounts", callback_data="back")
+    ]])
+    await reply_to.reply_text(
+        "\n".join(lines), parse_mode="HTML", reply_markup=keyboard
+    )
 
-async def build_weekly_report(session: ClientSession, cid: int) -> None:
-    tab = _tab_name_for_last_week()
-    await send(session, cid,
-               f"⏳ Fetching last week data ({tab})…\nThis takes ~30 seconds.")
-    try:
-        results = await fetch_all_accounts("last_week_sun_sat")
-        url     = await write_weekly_report(results, tab)
-    except Exception as e:
-        await send(session, cid,
-                   f"❌ Error: {_h(str(e))}\n\n"
-                   f"Check that GOOGLE_CREDS_B64 is set in Render.",
-                   MAIN_KBD)
-        return
 
-    total_sp = total_ld = 0.0
-    for r in results:
-        for c in (r.get("data") or []):
-            total_sp += float(c.get("spend", 0))
-            total_ld += sum(
-                float(a.get("value", 0))
-                for a in (c.get("actions") or [])
-                if a.get("action_type") in {"lead", "offsite_conversion.lead"}
-            )
-    cpl = round(total_sp / total_ld, 2) if total_ld else 0
+# ── Handlers ──────────────────────────────────────────────────────────────────
 
-    await send(session, cid,
-               f"✅ <b>Weekly Report — {tab}</b>\n"
-               f"{'─'*30}\n"
-               f"💸 Total Spend: <b>RM{round(total_sp, 2)}</b>\n"
-               f"🎯 Total Leads: <b>{int(total_ld)}</b>\n"
-               f"📊 Avg CPL: <b>RM{cpl}</b>\n\n"
-               f"📋 <b>Open your sheet and fill in the Appt column (column G):</b>\n"
-               f"{url}\n\n"
-               f"Appt%, Cost/Appt will calculate automatically.",
-               MAIN_KBD)
+async def cmd_start(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    await show_summary(update, ctx)
 
-async def daily_morning_report():
-    if not MORNING_CHAT_ID:
-        log.info("MORNING_CHAT_ID not set — daily morning report disabled")
-        return
-    log.info(f"Morning report active → chat {MORNING_CHAT_ID} at {MORNING_HOUR_UTC:02d}:00 UTC")
+async def cmd_alert(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    await show_alert(update.message, ctx)
 
-    while True:
-        now      = datetime.now(timezone.utc)
-        next_run = now.replace(hour=MORNING_HOUR_UTC, minute=0, second=0, microsecond=0)
-        if now >= next_run:
-            next_run += timedelta(days=1)
-        wait_secs = (next_run - now).total_seconds()
-        log.info(f"Next morning report in {wait_secs / 3600:.1f}h")
-        await asyncio.sleep(wait_secs)
+async def on_button(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
 
-        log.info("Sending morning report…")
-        async with ClientSession() as session:
-            try:
-                report = await build_all("yesterday")
-                await send(
-                    session, MORNING_CHAT_ID,
-                    "🌅 <b>Good Morning! Yesterday's Summary</b>\n\n" + report,
-                    MAIN_KBD,
-                )
-            except Exception as e:
-                log.error(f"Morning report failed: {e}")
+    if query.data == "back":
+        await show_summary(update, ctx)
 
-async def poll():
-    offset = 0
-    log.info("Bot polling started")
-    async with ClientSession() as session:
-        async with session.get(f"{TG}/getUpdates",
-                               params={"offset": -1, "limit": 1},
-                               timeout=ClientTimeout(total=10)) as r:
-            data = await r.json()
-            if data.get("result"):
-                offset = data["result"][-1]["update_id"] + 1
+    elif query.data == "alert":
+        await show_alert(query, ctx)
 
-    while True:
-        try:
-            async with ClientSession() as session:
-                async with session.get(
-                    f"{TG}/getUpdates",
-                    params={"timeout": 30, "offset": offset, "limit": 10},
-                    timeout=ClientTimeout(total=40)
-                ) as r:
-                    data = await r.json()
+    elif query.data.startswith("acc:"):
+        idx = int(query.data.split(":")[1])
+        accounts = ctx.user_data.get("accounts", [])
+        if idx < len(accounts):
+            await show_campaigns(query, accounts[idx])
+        else:
+            await query.message.reply_text("Data expired — send /start to refresh.")
 
-            for upd in data.get("result", []):
-                offset = upd["update_id"] + 1
-                asyncio.create_task(handle(upd))
 
-        except asyncio.CancelledError:
-            break
-        except Exception as e:
-            log.error(f"Poll error: {e}")
-            await asyncio.sleep(5)
+# ── Main ──────────────────────────────────────────────────────────────────────
 
-async def health(_): return web.Response(text="OK")
-
-async def run():
-    app = web.Application()
-    app.router.add_get("/", health)
-    runner = web.AppRunner(app)
-    await runner.setup()
-    await web.TCPSite(runner, "0.0.0.0", PORT).start()
-    log.info(f"Health check on port {PORT}")
-    await asyncio.gather(poll(), daily_morning_report())
+def main():
+    if not TOKEN:
+        raise RuntimeError("TELEGRAM_BOT_TOKEN env var not set")
+    app = Application.builder().token(TOKEN).build()
+    app.add_handler(CommandHandler(["start", "report"], cmd_start))
+    app.add_handler(CommandHandler("alert", cmd_alert))
+    app.add_handler(CallbackQueryHandler(on_button))
+    print("JPROP Bot running…")
+    app.run_polling(drop_pending_updates=True)
 
 if __name__ == "__main__":
-    asyncio.run(run())
+    main()
