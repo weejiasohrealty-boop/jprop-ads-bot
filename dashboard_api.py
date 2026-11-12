@@ -27,8 +27,8 @@ from meta_api import (
 )
 
 # ── Telegram ──────────────────────────────────────────────────────────────────
-TG_TOKEN   = os.environ.get("TELEGRAM_BOT_TOKEN", "")
-TG_CHAT    = os.environ.get("TELEGRAM_CHAT_ID", "")
+TG_TOKEN   = os.environ.get("8731337390:AAEixvZNTr2WQA0WVOJB9S9DtSSMZBnusT0", "")
+TG_CHAT    = os.environ.get("JPROP_REGION_BOT", "")
 INT_SECRET = os.environ.get("INTERNAL_SECRET", "jprop-internal-2024")
 
 # Benchmarks
