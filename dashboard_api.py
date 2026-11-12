@@ -22,15 +22,9 @@ from db import (
 )
 from meta_api import (
     ACCOUNTS, fetch_all_accounts, fetch_single_account,
-    get_actions_value, get_messages_value, get_leads_value, LEAD_ACTION_TYPES, fetch_trend_data,
+    get_actions_value, get_messages_value, get_leads_value,
+    LEAD_ACTION_TYPES, WHATSAPP_ACTION_TYPES, fetch_trend_data,
 )
-
-WHATSAPP_ACTION_TYPES = {
-    "onsite_conversion.messaging_conversation_started_7d",
-    "messaging_conversation_started_7d",
-    "onsite_conversion.total_messaging_connection",
-    "onsite_conversion.messaging_first_reply",
-}
 
 # ── Telegram ──────────────────────────────────────────────────────────────────
 TG_TOKEN   = os.environ.get("TELEGRAM_BOT_TOKEN", "")
